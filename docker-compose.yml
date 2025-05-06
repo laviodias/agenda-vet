@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:13
+    volumes:
+      - db_data:/var/lib/postgresql/data/
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME:-mydatabase}
+      POSTGRES_USER: ${DATABASE_USER:-myuser}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-mypassword}
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-myuser} -d ${DATABASE_NAME:-mydatabase}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile.api
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./api:/app
+      - static_volume:/app/staticfiles
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_NAME: ${DATABASE_NAME:-mydatabase}
+      DATABASE_USER: ${DATABASE_USER:-myuser}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-mypassword}
+      DATABASE_HOST: db
+      DATABASE_PORT: 5432
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile.web
+    volumes:
+      - ./web:/app
+    ports:
+      - "8080:8080"
+    depends_on:
+      - api
+    environment:
+      VUE_APP_API_BASE_URL: "http://localhost:8000"
+
+volumes:
+  db_data:
+  static_volume:
