@@ -1,0 +1,53 @@
+// Cores personalizadas
+$color-primary:      #2E7D32; // Verde escuro
+$color-secondary:    #A5D6A7; // Verde claro
+$color-info:         #B3E5FC; // Azul claro
+$color-accent:       #FFB74D; // Laranja suave
+$color-light-gray:   #F5F5F5; // Cinza claro
+$color-dark-gray:    #424242; // Cinza escuro
+$color-white:        #FFFFFF; // Branco
+
+// Paleta base do Bulma
+$primary:           $color-primary;
+$primary-invert:    $color-white;
+$info:              $color-info;
+$link:              $color-accent;
+$text:              $color-dark-gray;
+$background:        $color-light-gray;
+
+// Cores para elementos auxiliares
+$scheme-main:       $color-white;
+$scheme-main-bis:   $color-light-gray;
+$scheme-main-ter:   $color-secondary;
+$body-background-color: $background;
+
+// Tipografia
+$family-sans-serif: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+$size-1: 2.5rem;
+$size-2: 2rem;
+$size-3: 1.75rem;
+$size-4: 1.5rem;
+$size-5: 1.25rem;
+$size-6: 1rem;
+$size-7: 0.875rem;
+
+// Espaçamentos (margens/paddings)
+$spacing-small: 0.5rem;
+$spacing-medium: 1rem;
+$spacing-large: 2rem;
+
+// Bordas
+$radius-small: 4px;
+$radius: 8px;
+$radius-large: 16px;
+$box-radius: $radius;
+
+// Sombras suaves
+$shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+$shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+$shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.15);
+
+// Outros
+$control-border-width: 1px;
+$input-border-color: $color-light-gray;
+$input-shadow: none;
