@@ -89,9 +89,4 @@ function handleSubmit() {
 .agendamento-form .label {
   color: #333;
 }
-
-/* Força a cor do texto do botão primary a ser branco */
-.agendamento-form .button.is-primary {
-  color: #fff !important;
-}
 </style> 
