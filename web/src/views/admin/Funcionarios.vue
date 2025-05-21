@@ -2,7 +2,6 @@
 import { ref } from 'vue'
 
 const funcionarios = ref([
-  // Dados de exemplo
   { id: 1, nome: 'Dr. João Silva', especialidade: 'Clínico Geral', email: 'joao.silva@agendavet.com' },
   { id: 2, nome: 'Dra. Maria Santos', especialidade: 'Dermatologia', email: 'maria.santos@agendavet.com' }
 ])
@@ -34,7 +33,6 @@ const adicionarFuncionario = () => {
     ...novoFuncionario.value
   })
 
-  // Limpar formulário
   novoFuncionario.value = {
     nome: '',
     especialidade: '',
@@ -54,7 +52,6 @@ const removerFuncionario = (id) => {
   <div class="funcionarios-container">
     <h1 class="title is-2 mb-4">Gerenciamento de Funcionários</h1>
 
-    <!-- Formulário de Cadastro -->
     <div class="box mb-6">
       <h2 class="title is-4 mb-4">Novo Funcionário</h2>
       <div class="columns is-multiline">
@@ -137,7 +134,6 @@ const removerFuncionario = (id) => {
       </div>
     </div>
 
-    <!-- Lista de Funcionários -->
     <div class="box">
       <h2 class="title is-4 mb-4">Funcionários Cadastrados</h2>
       <div class="table-container">

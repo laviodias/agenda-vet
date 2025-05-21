@@ -2,7 +2,6 @@
 import { ref } from 'vue'
 
 const servicos = ref([
-  // Dados de exemplo
   { 
     id: 1, 
     nome: 'Consulta Clínica', 
@@ -50,7 +49,6 @@ const adicionarServico = () => {
     preco: parseFloat(novoServico.value.preco)
   })
 
-  // Limpar formulário
   novoServico.value = {
     nome: '',
     descricao: '',
@@ -87,7 +85,6 @@ const formatarDuracao = (minutos) => {
   <div class="servicos-container">
     <h1 class="title is-2 mb-4">Gerenciamento de Serviços</h1>
 
-    <!-- Formulário de Cadastro -->
     <div class="box mb-6">
       <h2 class="title is-4 mb-4">Novo Serviço</h2>
       <div class="columns is-multiline">
@@ -195,7 +192,6 @@ const formatarDuracao = (minutos) => {
       </div>
     </div>
 
-    <!-- Lista de Serviços -->
     <div class="box">
       <h2 class="title is-4 mb-4">Serviços Cadastrados</h2>
       <div class="table-container">

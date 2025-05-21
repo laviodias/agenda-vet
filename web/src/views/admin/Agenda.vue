@@ -117,7 +117,6 @@ const adicionarHorario = () => {
     disponivel: true
   })
 
-  // Limpar formulário
   novoHorario.value = {
     funcionarioId: '',
     servicoId: '',
@@ -261,7 +260,6 @@ const getServicoNome = (servicoId) => {
       </div>
     </div>
 
-    <!-- Lista de Horários por Funcionário -->
     <div class="box">
       <h2 class="title is-4 mb-4">Horários Disponíveis</h2>
       
