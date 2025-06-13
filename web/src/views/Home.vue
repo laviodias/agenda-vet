@@ -1,5 +1,12 @@
 <script setup>
+import { useRouter } from 'vue-router'
 import AgendamentoForm from '../components/AgendamentoForm.vue';
+
+const router = useRouter()
+
+const goToAuth = () => {
+  router.push('/auth')
+}
 </script>
 
 <template>
@@ -10,7 +17,12 @@ import AgendamentoForm from '../components/AgendamentoForm.vue';
       <p class="subtitle">Facilite o agendamento de consultas para o seu pet!</p>
     </div>
     <div class="actions">
-      <button class="button is-primary is-fullwidth mt-4">Agendar Consulta</button>
+      <button @click="goToAuth" class="button is-primary is-fullwidth mt-4">
+        <span class="icon">
+          <i class="fas fa-sign-in-alt"></i>
+        </span>
+        <span>Entrar / Cadastrar</span>
+      </button>
     </div>
     <div class="illustration">
       <img src="https://cdn-icons-png.flaticon.com/512/616/616408.png" alt="Veterinário" />
@@ -50,19 +62,15 @@ h1 {
 .actions {
   margin-bottom: 2rem;
 }
-.btn-primary {
-  background: var(--primary, #2E7D32);
-  color: #fff;
-  border: none;
+.button {
   border-radius: 8px;
-  padding: 0.75rem 2rem;
-  font-size: 1.1rem;
-  cursor: pointer;
-  transition: background 0.2s;
+  font-weight: 600;
+  height: 3rem;
+  transition: all 0.2s;
 }
-.btn-primary:hover {
-  background: var(--secondary, #A5D6A7);
-  color: var(--primary, #2E7D32);
+.button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 .illustration img {
   width: 120px;

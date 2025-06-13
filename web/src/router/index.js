@@ -8,6 +8,16 @@ const routes = [
     component: Home
   },
   {
+    path: '/auth',
+    name: 'Auth',
+    component: () => import('../views/Auth.vue')
+  },
+  {
+    path: '/cliente',
+    name: 'ClienteDashboard',
+    component: () => import('../views/ClienteDashboard.vue')
+  },
+  {
     path: '/admin',
     name: 'Admin',
     component: () => import('../views/admin/AdminLayout.vue'),
