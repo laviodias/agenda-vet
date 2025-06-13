@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from datetime import timedelta
 
 # Carrega as variáveis de ambiente do arquivo .env
 load_dotenv()
@@ -43,15 +44,17 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',  # Adicione o Django REST Framework
+    'rest_framework_simplejwt',  # JWT Authentication
     'corsheaders',     # Adicione o django-cors-headers
-    'animais',         # App de Animais
-    'servicos',        # App de Serviços
-    'usuarios',        # App de Usuários
-    'agendamentos',    # App de Agendamentos
     'core',           # App de Core
+    'usuarios',        # App de Usuários
+    'servicos',        # App de Serviços
+    'animais',         # App de Animais
+    'agendamentos',    # App de Agendamentos
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',  # Adicione o middleware do CORS primeiro
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -59,7 +62,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'corsheaders.middleware.CorsMiddleware',  # Adicione o middleware do CORS
 ]
 
 ROOT_URLCONF = 'agenda_vet_api.urls'
@@ -120,13 +122,16 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'pt-br'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Sao_Paulo'
 
 USE_I18N = True
 
 USE_TZ = True
+
+# Configuração para evitar problemas com APPEND_SLASH em requisições POST
+APPEND_SLASH = False
 
 
 # Static files (CSS, JavaScript, Images)
@@ -140,11 +145,54 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Configurações do CORS
-CORS_ALLOWED_ORIGINS = ['http://localhost:8080']
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:8080',
+    'http://localhost:3000',
+    'http://127.0.0.1:8080',
+    'http://127.0.0.1:3000',
+]
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = True  # Para desenvolvimento
 
-# Configurações do Django REST Framework (opcional, mas comum para APIs)
+# Configurações do Django REST Framework
 REST_FRAMEWORK = {
-    # Você pode adicionar configurações aqui, como autenticação padrão,
-    # permissões, renderers, parsers, etc.
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+    ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
 }
+
+# Configurações do JWT
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=24),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': False,
+
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'VERIFYING_KEY': None,
+    'AUDIENCE': None,
+    'ISSUER': None,
+
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
+
+    'JTI_CLAIM': 'jti',
+}
+
+# Modelo de usuário customizado
+AUTH_USER_MODEL = 'usuarios.Usuario'

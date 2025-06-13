@@ -1,6 +1,7 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
+import authService from '../services/authService.js'
 
 const router = useRouter()
 
@@ -23,18 +24,33 @@ const handleLogin = async () => {
   errorMessage.value = ''
 
   try {
-    // TODO: Integrar com API de login
-    // Simulação de login por enquanto
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    const response = await authService.login(loginData.email, loginData.senha)
     
-    // Verificar se é admin ou cliente
-    if (loginData.email.includes('admin')) {
+    // Salvar dados do usuário
+    authService.setCurrentUser(response.usuario)
+    
+    // Redirecionar baseado no tipo de usuário
+    if (response.usuario.tipo === 'admin') {
       router.push('/admin')
     } else {
       router.push('/cliente')
     }
   } catch (error) {
-    errorMessage.value = 'Erro ao fazer login. Verifique suas credenciais.'
+    console.error('Erro no login:', error)
+    if (error.response?.data) {
+      // Tratar erros específicos da API
+      if (error.response.data.email) {
+        errorMessage.value = error.response.data.email[0]
+      } else if (error.response.data.senha) {
+        errorMessage.value = error.response.data.senha[0]
+      } else if (error.response.data.non_field_errors) {
+        errorMessage.value = error.response.data.non_field_errors[0]
+      } else {
+        errorMessage.value = 'Erro ao fazer login. Verifique suas credenciais.'
+      }
+    } else {
+      errorMessage.value = 'Erro ao conectar com o servidor. Tente novamente.'
+    }
   } finally {
     loading.value = false
   }

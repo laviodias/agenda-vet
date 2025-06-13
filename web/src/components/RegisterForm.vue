@@ -1,6 +1,7 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
+import authService from '../services/authService.js'
 
 const router = useRouter()
 
@@ -84,14 +85,51 @@ const handleRegister = async () => {
   errorMessage.value = ''
 
   try {
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    const dadosCliente = {
+      nome: registerData.nome,
+      email: registerData.email,
+      telefone: registerData.telefone,
+      senha: registerData.senha,
+      pet: {
+        nome: animalData.nome,
+        especie: animalData.especie,
+        raca: animalData.raca,
+        data_nascimento: animalData.dataNascimento
+      }
+    }
+
+    const response = await authService.registerCliente(dadosCliente)
+    
+    // Salvar dados do usuário se houver token
+    if (response.usuario) {
+      authService.setCurrentUser(response.usuario)
+    }
+    
     successMessage.value = 'Cadastro realizado com sucesso! Redirecionando...'
     
     setTimeout(() => {
       router.push('/cliente')
     }, 2000)
   } catch (error) {
-    errorMessage.value = 'Erro ao realizar cadastro. Tente novamente.'
+    console.error('Erro no registro:', error)
+    if (error.response?.data) {
+      // Tratar erros específicos da API
+      if (error.response.data.email) {
+        errorMessage.value = error.response.data.email[0]
+      } else if (error.response.data.senha) {
+        errorMessage.value = error.response.data.senha[0]
+      } else if (error.response.data.nome) {
+        errorMessage.value = error.response.data.nome[0]
+      } else if (error.response.data.telefone) {
+        errorMessage.value = error.response.data.telefone[0]
+      } else if (error.response.data.pet) {
+        errorMessage.value = 'Erro nos dados do pet: ' + Object.values(error.response.data.pet).flat().join(', ')
+      } else {
+        errorMessage.value = 'Erro ao realizar cadastro. Verifique os dados informados.'
+      }
+    } else {
+      errorMessage.value = 'Erro ao conectar com o servidor. Tente novamente.'
+    }
   } finally {
     loading.value = false
   }

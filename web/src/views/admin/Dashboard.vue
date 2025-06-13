@@ -1,129 +1,24 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import AdminWeeklyCalendar from '../../components/AdminWeeklyCalendar.vue'
+import adminService from '../../services/adminService.js'
 
-// Dados mockados até integrar com o backend
-const agendamentos = ref([
-  {
-    id: 1,
-    data_hora: '2025-06-20T09:00:00',
-    servico: {
-      nome: 'Consulta Clínica',
-      preco: 150.00
-    },
-    responsavel: {
-      nome: 'Dr. João Silva'
-    },
-    animal: {
-      nome: 'Rex',
-      especie: 'Cão'
-    },
-    cliente: {
-      nome: 'Maria Santos'
-    },
-    observacoes: 'Primeira consulta, checkup completo'
-  },
-  {
-    id: 2,
-    data_hora: '2025-06-20T14:00:00',
-    servico: {
-      nome: 'Banho e Tosa',
-      preco: 80.00
-    },
-    responsavel: {
-      nome: 'Dra. Ana Costa'
-    },
-    animal: {
-      nome: 'Luna',
-      especie: 'Gato'
-    },
-    cliente: {
-      nome: 'Carlos Oliveira'
-    },
-    observacoes: 'Tosa higiênica'
-  },
-  {
-    id: 3,
-    data_hora: '2025-06-21T10:30:00',
-    servico: {
-      nome: 'Vacinação',
-      preco: 120.00
-    },
-    responsavel: {
-      nome: 'Dr. João Silva'
-    },
-    animal: {
-      nome: 'Thor',
-      especie: 'Cão'
-    },
-    cliente: {
-      nome: 'Fernanda Lima'
-    },
-    observacoes: 'Vacina V10'
-  },
-  {
-    id: 4,
-    data_hora: '2025-06-22T16:00:00',
-    servico: {
-      nome: 'Consulta Dermatológica',
-      preco: 200.00
-    },
-    responsavel: {
-      nome: 'Dra. Maria Santos'
-    },
-    animal: {
-      nome: 'Mia',
-      especie: 'Gato'
-    },
-    cliente: {
-      nome: 'Roberto Silva'
-    },
-    observacoes: 'Alergia na pele'
-  },
-  {
-    id: 5,
-    data_hora: '2025-06-23T11:00:00',
-    servico: {
-      nome: 'Exame de Sangue',
-      preco: 180.00
-    },
-    responsavel: {
-      nome: 'Dr. João Silva'
-    },
-    animal: {
-      nome: 'Bella',
-      especie: 'Cão'
-    },
-    cliente: {
-      nome: 'Patrícia Costa'
-    },
-    observacoes: 'Checkup anual'
-  }
-])
-
+// Dados do dashboard
+const agendamentos = ref([])
 const estatisticas = ref({
-  totalConsultas: 0,
-  consultasHoje: 0,
-  faturamentoEstimado: 0,
-  consultasPendentes: 0
+  totalAgendamentos: 0,
+  agendamentosHoje: 0,
+  agendamentosPendentes: 0,
+  faturamentoMes: 0,
+  clientesAtivos: 0
 })
+const agendamentosRecentes = ref([])
+const servicosPopulares = ref([])
 
-const calcularEstatisticas = () => {
-  const hoje = new Date().toISOString().split('T')[0]
-  
-  estatisticas.value = {
-    totalConsultas: agendamentos.value.length,
-    consultasHoje: agendamentos.value.filter(a => 
-      a.data_hora.startsWith(hoje)
-    ).length,
-    faturamentoEstimado: agendamentos.value.reduce((total, a) => 
-      total + parseFloat(a.servico.preco), 0
-    ),
-    consultasPendentes: agendamentos.value.filter(a => 
-      new Date(a.data_hora) > new Date()
-    ).length
-  }
-}
+// Estados de loading
+const loading = ref(true)
+const loadingStats = ref(true)
+const loadingAgendamentos = ref(true)
 
 const formatarMoeda = (valor) => {
   return new Intl.NumberFormat('pt-BR', {
@@ -132,8 +27,73 @@ const formatarMoeda = (valor) => {
   }).format(valor)
 }
 
+const formatarData = (dataString) => {
+  return new Date(dataString).toLocaleDateString('pt-BR')
+}
+
+const formatarHora = (dataString) => {
+  return new Date(dataString).toLocaleTimeString('pt-BR', { 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  })
+}
+
+const carregarDados = async () => {
+  try {
+    loading.value = true
+    
+    // Carregar dados em paralelo
+    const [statsData, agendamentosData, agendamentosRecentesData] = await Promise.all([
+      adminService.getDashboardStats(),
+      adminService.getAllAgendamentos(),
+      adminService.getAgendamentosRecentes()
+    ])
+
+    // Atualizar estatísticas
+    estatisticas.value = {
+      totalAgendamentos: statsData.totalAgendamentos,
+      agendamentosHoje: statsData.agendamentosHoje,
+      agendamentosPendentes: statsData.agendamentosPendentes,
+      faturamentoMes: statsData.faturamentoMes,
+      clientesAtivos: statsData.clientesAtivos
+    }
+
+    // Atualizar agendamentos
+    agendamentos.value = agendamentosData || []
+    agendamentosRecentes.value = agendamentosRecentesData || []
+    servicosPopulares.value = statsData.servicosPopulares || []
+
+  } catch (error) {
+    console.error('Erro ao carregar dados do dashboard:', error)
+  } finally {
+    loading.value = false
+    loadingStats.value = false
+    loadingAgendamentos.value = false
+  }
+}
+
+const confirmarAgendamento = async (agendamentoId) => {
+  try {
+    await adminService.confirmarAgendamento(agendamentoId)
+    // Recarregar dados após confirmação
+    await carregarDados()
+  } catch (error) {
+    console.error('Erro ao confirmar agendamento:', error)
+  }
+}
+
+const cancelarAgendamento = async (agendamentoId) => {
+  try {
+    await adminService.cancelarAgendamento(agendamentoId)
+    // Recarregar dados após cancelamento
+    await carregarDados()
+  } catch (error) {
+    console.error('Erro ao cancelar agendamento:', error)
+  }
+}
+
 onMounted(() => {
-  calcularEstatisticas()
+  carregarDados()
 })
 </script>
 
@@ -144,112 +104,173 @@ onMounted(() => {
       <p class="subtitle">Visão geral das consultas e estatísticas da clínica</p>
     </div>
 
-    <div class="stats-grid mb-6">
-      <div class="stat-card">
-        <div class="stat-icon">
-          <i class="fas fa-calendar-check"></i>
-        </div>
-        <div class="stat-content">
-          <div class="stat-value">{{ estatisticas.totalConsultas }}</div>
-          <div class="stat-label">Total de Consultas</div>
-        </div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-icon">
-          <i class="fas fa-calendar-day"></i>
-        </div>
-        <div class="stat-content">
-          <div class="stat-value">{{ estatisticas.consultasHoje }}</div>
-          <div class="stat-label">Consultas Hoje</div>
-        </div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-icon">
-          <i class="fas fa-dollar-sign"></i>
-        </div>
-        <div class="stat-content">
-          <div class="stat-value">{{ formatarMoeda(estatisticas.faturamentoEstimado) }}</div>
-          <div class="stat-label">Faturamento Estimado</div>
-        </div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-icon">
-          <i class="fas fa-clock"></i>
-        </div>
-        <div class="stat-content">
-          <div class="stat-value">{{ estatisticas.consultasPendentes }}</div>
-          <div class="stat-label">Consultas Pendentes</div>
-        </div>
-      </div>
+    <!-- Loading geral -->
+    <div v-if="loading" class="has-text-centered">
+      <div class="loader"></div>
+      <p class="mt-3">Carregando dashboard...</p>
     </div>
 
-    <div class="calendar-section">
-      <div class="section-header">
-        <h2 class="title is-3">Agenda Semanal</h2>
-        <p class="subtitle">Visualize todas as consultas agendadas para a semana</p>
-      </div>
-      
-      <AdminWeeklyCalendar :agendamentos="agendamentos" />
-    </div>
+    <div v-else>
+      <!-- Estatísticas -->
+      <div class="stats-grid mb-6">
+        <div class="stat-card">
+          <div class="stat-icon">
+            <i class="fas fa-calendar-check"></i>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ estatisticas.totalAgendamentos }}</div>
+            <div class="stat-label">Total de Agendamentos</div>
+          </div>
+        </div>
 
-    <div class="upcoming-appointments mt-6">
-      <div class="section-header">
-        <h2 class="title is-3">Próximas Consultas</h2>
-        <p class="subtitle">Consultas agendadas para os próximos dias</p>
+        <div class="stat-card">
+          <div class="stat-icon">
+            <i class="fas fa-calendar-day"></i>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ estatisticas.agendamentosHoje }}</div>
+            <div class="stat-label">Agendamentos Hoje</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">
+            <i class="fas fa-dollar-sign"></i>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ formatarMoeda(estatisticas.faturamentoMes) }}</div>
+            <div class="stat-label">Faturamento do Mês</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">
+            <i class="fas fa-clock"></i>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ estatisticas.agendamentosPendentes }}</div>
+            <div class="stat-label">Agendamentos Pendentes</div>
+          </div>
+        </div>
       </div>
-      
-      <div class="appointments-list">
-        <div 
-          v-for="agendamento in agendamentos.slice(0, 5)" 
-          :key="agendamento.id"
-          class="appointment-item"
-        >
-          <div class="appointment-time">
-            <div class="time">{{ new Date(agendamento.data_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) }}</div>
-            <div class="date">{{ new Date(agendamento.data_hora).toLocaleDateString('pt-BR') }}</div>
-          </div>
-          
-          <div class="appointment-info">
-            <div class="appointment-main">
-              <strong>{{ agendamento.servico.nome }}</strong>
-              <span class="price">{{ formatarMoeda(agendamento.servico.preco) }}</span>
-            </div>
-            
-            <div class="appointment-details">
-              <span class="professional">
-                <i class="fas fa-user-md"></i>
-                {{ agendamento.responsavel.nome }}
-              </span>
-              <span class="animal">
-                <i class="fas fa-paw"></i>
-                {{ agendamento.animal.nome }} ({{ agendamento.animal.especie }})
-              </span>
-              <span class="client">
-                <i class="fas fa-user"></i>
-                {{ agendamento.cliente.nome }}
-              </span>
-            </div>
-            
-            <div v-if="agendamento.observacoes" class="appointment-notes">
-              <i class="fas fa-sticky-note"></i>
-              {{ agendamento.observacoes }}
+
+      <!-- Serviços Populares -->
+      <div v-if="servicosPopulares.length > 0" class="section mb-6">
+        <div class="section-header">
+          <h2 class="title is-3">Serviços Mais Populares</h2>
+          <p class="subtitle">Serviços mais solicitados pelos clientes</p>
+        </div>
+        
+        <div class="columns is-multiline">
+          <div 
+            v-for="servico in servicosPopulares.slice(0, 3)" 
+            :key="servico.nome"
+            class="column is-4"
+          >
+            <div class="card">
+              <div class="card-content has-text-centered">
+                <div class="service-icon mb-3">
+                  <i class="fas fa-stethoscope" style="font-size: 2rem; color: #3273dc;"></i>
+                </div>
+                <h3 class="title is-5">{{ servico.nome }}</h3>
+                <p class="has-text-grey">{{ servico.quantidade }} agendamentos</p>
+              </div>
             </div>
           </div>
-          
-          <div class="appointment-actions">
-            <button class="button is-small is-info">
-              <span class="icon">
-                <i class="fas fa-edit"></i>
-              </span>
-            </button>
-            <button class="button is-small is-danger">
-              <span class="icon">
-                <i class="fas fa-trash"></i>
-              </span>
-            </button>
+        </div>
+      </div>
+
+      <!-- Calendário Semanal -->
+      <div class="calendar-section">
+        <div class="section-header">
+          <h2 class="title is-3">Agenda Semanal</h2>
+          <p class="subtitle">Visualize todas as consultas agendadas para a semana</p>
+        </div>
+        
+        <div v-if="loadingAgendamentos" class="has-text-centered">
+          <div class="loader"></div>
+          <p class="mt-3">Carregando agenda...</p>
+        </div>
+        
+        <AdminWeeklyCalendar v-else :agendamentos="agendamentos" />
+      </div>
+
+      <!-- Agendamentos Recentes -->
+      <div class="upcoming-appointments mt-6">
+        <div class="section-header">
+          <h2 class="title is-3">Agendamentos Recentes</h2>
+          <p class="subtitle">Últimos agendamentos realizados</p>
+        </div>
+        
+        <div v-if="loadingAgendamentos" class="has-text-centered">
+          <div class="loader"></div>
+          <p class="mt-3">Carregando agendamentos...</p>
+        </div>
+        
+        <div v-else class="appointments-list">
+          <div 
+            v-for="agendamento in agendamentosRecentes.slice(0, 5)" 
+            :key="agendamento.id"
+            class="appointment-item"
+          >
+            <div class="appointment-time">
+              <div class="time">{{ formatarHora(agendamento.data_hora || agendamento.horario) }}</div>
+              <div class="date">{{ formatarData(agendamento.data_hora || agendamento.data) }}</div>
+            </div>
+            
+            <div class="appointment-info">
+              <div class="appointment-main">
+                <strong>{{ agendamento.servico?.nome || agendamento.servico }}</strong>
+                <span class="price">{{ formatarMoeda(agendamento.servico?.preco || agendamento.preco) }}</span>
+              </div>
+              
+              <div class="appointment-details">
+                <span class="professional">
+                  <i class="fas fa-user-md"></i>
+                  {{ agendamento.responsavel?.nome || agendamento.profissional }}
+                </span>
+                <span class="animal">
+                  <i class="fas fa-paw"></i>
+                  {{ agendamento.animal?.nome || agendamento.pet }} 
+                  ({{ agendamento.animal?.especie || 'N/A' }})
+                </span>
+                <span class="client">
+                  <i class="fas fa-user"></i>
+                  {{ agendamento.cliente?.nome || agendamento.cliente }}
+                </span>
+              </div>
+              
+              <div v-if="agendamento.observacoes" class="appointment-notes">
+                <i class="fas fa-sticky-note"></i>
+                {{ agendamento.observacoes }}
+              </div>
+              
+              <div class="status-badge" :class="agendamento.status">
+                {{ agendamento.status }}
+              </div>
+            </div>
+            
+            <div class="appointment-actions">
+              <button 
+                v-if="agendamento.status === 'pendente'"
+                @click="confirmarAgendamento(agendamento.id)"
+                class="button is-small is-success"
+                title="Confirmar"
+              >
+                <span class="icon">
+                  <i class="fas fa-check"></i>
+                </span>
+              </button>
+              <button 
+                @click="cancelarAgendamento(agendamento.id)"
+                class="button is-small is-danger"
+                title="Cancelar"
+              >
+                <span class="icon">
+                  <i class="fas fa-times"></i>
+                </span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -294,7 +315,7 @@ onMounted(() => {
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #2E7D32, #A5D6A7);
+  background: linear-gradient(135deg, #3273dc, #209cee);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -309,7 +330,7 @@ onMounted(() => {
 .stat-value {
   font-size: 1.75rem;
   font-weight: bold;
-  color: #2E7D32;
+  color: #3273dc;
   margin-bottom: 0.25rem;
 }
 
@@ -358,7 +379,7 @@ onMounted(() => {
 .appointment-time .time {
   font-size: 1.25rem;
   font-weight: bold;
-  color: #2E7D32;
+  color: #3273dc;
 }
 
 .appointment-time .date {
@@ -384,7 +405,7 @@ onMounted(() => {
 }
 
 .price {
-  color: #2E7D32;
+  color: #3273dc;
   font-weight: bold;
 }
 
@@ -421,9 +442,49 @@ onMounted(() => {
   width: 12px;
 }
 
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  margin-top: 0.5rem;
+}
+
+.status-badge.confirmado {
+  background-color: #48c774;
+  color: white;
+}
+
+.status-badge.pendente {
+  background-color: #ffdd57;
+  color: #333;
+}
+
+.status-badge.cancelado {
+  background-color: #f14668;
+  color: white;
+}
+
 .appointment-actions {
   display: flex;
   gap: 0.5rem;
+}
+
+.loader {
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #3273dc;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 @media (max-width: 768px) {
@@ -446,10 +507,6 @@ onMounted(() => {
   .appointment-details {
     flex-direction: column;
     gap: 0.5rem;
-  }
-  
-  .appointment-actions {
-    align-self: flex-end;
   }
 }
 </style> 
