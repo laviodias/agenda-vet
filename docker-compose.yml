@@ -45,8 +45,6 @@ services:
       - ./web:/app
     ports:
       - "8080:8080"
-    depends_on:
-      - api
     environment:
       VUE_APP_API_BASE_URL: "http://localhost:8000"
 
