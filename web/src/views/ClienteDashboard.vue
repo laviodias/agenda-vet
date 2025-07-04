@@ -47,6 +47,8 @@ const agendamentos = ref([
 ])
 
 const showAgendamentoForm = ref(false)
+const showEditarPetForm = ref(false)
+const petSelecionado = ref(null)
 
 const logout = () => {
   // TODO: Implementar logout
@@ -57,6 +59,37 @@ const cancelarAgendamento = (id) => {
   if (confirm('Tem certeza que deseja cancelar este agendamento?')) {
     agendamentos.value = agendamentos.value.filter(a => a.id !== id)
   }
+}
+
+const editarPet = (animal) => {
+  petSelecionado.value = { ...animal }
+  showEditarPetForm.value = true
+}
+
+const agendarParaPet = (animal) => {
+  petSelecionado.value = animal
+  showAgendamentoForm.value = true
+}
+
+const fecharModalAgendamento = () => {
+  showAgendamentoForm.value = false
+  petSelecionado.value = null
+}
+
+const salvarPet = () => {
+  // Encontrar o índice do pet no array
+  const index = animais.value.findIndex(a => a.id === petSelecionado.value.id)
+  if (index !== -1) {
+    // Atualizar o pet
+    animais.value[index] = { ...petSelecionado.value }
+  }
+  showEditarPetForm.value = false
+  petSelecionado.value = null
+}
+
+const cancelarEdicaoPet = () => {
+  showEditarPetForm.value = false
+  petSelecionado.value = null
 }
 
 const formatarData = (data) => {
@@ -222,13 +255,13 @@ const getStatusText = (status) => {
                 </div>
               </div>
               <footer class="card-footer">
-                <a class="card-footer-item">
+                <a class="card-footer-item" @click="editarPet(animal)">
                   <span class="icon">
                     <i class="fas fa-edit"></i>
                   </span>
                   <span>Editar</span>
                 </a>
-                <a class="card-footer-item">
+                <a class="card-footer-item" @click="agendarParaPet(animal)">
                   <span class="icon">
                     <i class="fas fa-calendar-plus"></i>
                   </span>
@@ -297,19 +330,93 @@ const getStatusText = (status) => {
 
     <!-- Modal de Agendamento -->
     <div v-if="showAgendamentoForm" class="modal is-active">
-      <div class="modal-background" @click="showAgendamentoForm = false"></div>
+      <div class="modal-background" @click="fecharModalAgendamento"></div>
       <div class="modal-card">
         <header class="modal-card-head">
           <p class="modal-card-title">Novo Agendamento</p>
           <button 
             class="delete" 
             aria-label="close"
-            @click="showAgendamentoForm = false"
+            @click="fecharModalAgendamento"
           ></button>
         </header>
         <section class="modal-card-body">
-          <AgendamentoForm />
+          <AgendamentoForm 
+            :pets="animais" 
+            :pet-selecionado="petSelecionado"
+          />
         </section>
+      </div>
+    </div>
+
+    <!-- Modal de Edição de Pet -->
+    <div v-if="showEditarPetForm" class="modal is-active">
+      <div class="modal-background" @click="cancelarEdicaoPet"></div>
+      <div class="modal-card">
+        <header class="modal-card-head">
+          <p class="modal-card-title">Editar Pet</p>
+          <button 
+            class="delete" 
+            aria-label="close"
+            @click="cancelarEdicaoPet"
+          ></button>
+        </header>
+        <section class="modal-card-body">
+          <div class="field">
+            <label class="label">Nome</label>
+            <div class="control">
+              <input 
+                class="input" 
+                type="text" 
+                v-model="petSelecionado.nome"
+                placeholder="Nome do pet"
+              >
+            </div>
+          </div>
+          
+          <div class="field">
+            <label class="label">Espécie</label>
+            <div class="control">
+              <div class="select is-fullwidth">
+                <select v-model="petSelecionado.especie">
+                  <option value="Cão">Cão</option>
+                  <option value="Gato">Gato</option>
+                  <option value="Ave">Ave</option>
+                  <option value="Réptil">Réptil</option>
+                  <option value="Outro">Outro</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          
+          <div class="field">
+            <label class="label">Raça</label>
+            <div class="control">
+              <input 
+                class="input" 
+                type="text" 
+                v-model="petSelecionado.raca"
+                placeholder="Raça do pet"
+              >
+            </div>
+          </div>
+          
+          <div class="field">
+            <label class="label">Idade</label>
+            <div class="control">
+              <input 
+                class="input" 
+                type="text" 
+                v-model="petSelecionado.idade"
+                placeholder="Ex: 3 anos, 6 meses"
+              >
+            </div>
+          </div>
+        </section>
+        <footer class="modal-card-foot">
+          <button class="button is-success" @click="salvarPet">Salvar</button>
+          <button class="button" @click="cancelarEdicaoPet">Cancelar</button>
+        </footer>
       </div>
     </div>
   </div>
@@ -359,6 +466,19 @@ const getStatusText = (status) => {
 .card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.card-footer-item {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.card-footer-item:hover {
+  background-color: #f5f5f5;
+}
+
+.card-footer-item:active {
+  background-color: #e8e8e8;
 }
 
 .table-container {

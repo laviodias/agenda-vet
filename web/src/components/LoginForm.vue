@@ -155,7 +155,7 @@ const togglePasswordVisibility = () => {
               <strong>Admin:</strong> admin@agendavet.com / admin123
             </div>
             <div class="demo-account">
-              <strong>Cliente:</strong> cliente@agendavet.com / cliente123
+              <strong>Cliente:</strong> cliente@email.com / cliente123
             </div>
           </div>
         </details>

@@ -150,7 +150,7 @@ def agendamentos_recentes(request):
                 'cliente': agendamento.cliente.nome,
                 'profissional': agendamento.responsavel.nome if agendamento.responsavel else 'Não definido',
                 'observacoes': agendamento.observacoes or '',
-                'status': 'confirmado'  # Por enquanto, todos confirmados
+                'status': 'confirmado'  # Status fixo por enquanto
             })
         
         return Response(data)

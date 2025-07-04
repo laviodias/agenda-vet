@@ -35,9 +35,13 @@
           <div class="select is-fullwidth is-light">
             <select id="pet" v-model="agendamento.pet" required>
               <option value="">Selecione um pet</option>
-              <option value="Cachorro">Cachorro</option>
-              <option value="Gato">Gato</option>
-              <option value="Outro">Outro</option>
+              <option 
+                v-for="pet in pets" 
+                :key="pet.id" 
+                :value="pet.id"
+              >
+                {{ pet.nome }} ({{ pet.especie }})
+              </option>
             </select>
           </div>
         </div>
@@ -52,8 +56,20 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue';
+import { reactive, onMounted } from 'vue';
 import WeeklyCalendar from './WeeklyCalendar.vue';
+
+// Props
+const props = defineProps({
+  pets: {
+    type: Array,
+    default: () => []
+  },
+  petSelecionado: {
+    type: Object,
+    default: null
+  }
+});
 
 const agendamento = reactive({
   dateTime: { date: '', time: '' },
@@ -62,8 +78,17 @@ const agendamento = reactive({
   pet: ''
 });
 
+// Se um pet foi selecionado, definir como padrão
+onMounted(() => {
+  if (props.petSelecionado) {
+    agendamento.pet = props.petSelecionado.id;
+  }
+});
+
 function handleSubmit() {
   console.log('Agendamento enviado:', agendamento);
+  // Aqui você pode emitir um evento para o componente pai
+  // emit('agendamento-criado', agendamento);
 }
 </script>
 
