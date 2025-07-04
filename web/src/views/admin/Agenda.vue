@@ -26,7 +26,7 @@ const horariosDisponiveis = ref([
     id: 1, 
     funcionarioId: 1, 
     servicoId: 1,
-    data: '2024-03-20', 
+    data: '2025-03-20', 
     horaInicio: '09:00', 
     horaFim: '09:30', 
     disponivel: true 
@@ -35,7 +35,7 @@ const horariosDisponiveis = ref([
     id: 2, 
     funcionarioId: 1, 
     servicoId: 1,
-    data: '2024-03-20', 
+    data: '2025-03-20', 
     horaInicio: '10:00', 
     horaFim: '10:30', 
     disponivel: true 
@@ -44,7 +44,7 @@ const horariosDisponiveis = ref([
     id: 3, 
     funcionarioId: 2, 
     servicoId: 2,
-    data: '2024-03-20', 
+    data: '2025-03-20', 
     horaInicio: '14:00', 
     horaFim: '15:00', 
     disponivel: true 
