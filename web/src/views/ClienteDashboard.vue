@@ -50,6 +50,19 @@ const showAgendamentoForm = ref(false)
 const showEditarPetForm = ref(false)
 const petSelecionado = ref(null)
 
+// Verificar se há um pet selecionado para agendamento na URL
+onMounted(() => {
+  const urlParams = new URLSearchParams(window.location.search)
+  const agendarPetId = urlParams.get('agendarPet')
+  if (agendarPetId) {
+    const pet = animais.value.find(a => a.id == agendarPetId)
+    if (pet) {
+      petSelecionado.value = pet
+      showAgendamentoForm.value = true
+    }
+  }
+})
+
 const logout = () => {
   // TODO: Implementar logout
   router.push('/auth')
@@ -85,6 +98,12 @@ const salvarPet = () => {
   }
   showEditarPetForm.value = false
   petSelecionado.value = null
+}
+
+// Função para atualizar pets quando retornar da página Meus Pets
+const atualizarPets = () => {
+  // Em uma implementação real, aqui você buscaria os dados atualizados da API
+  // Por enquanto, vamos manter os dados locais
 }
 
 const cancelarEdicaoPet = () => {
@@ -140,13 +159,13 @@ const getStatusText = (status) => {
             </a>
 
             <div class="navbar-dropdown is-right">
-              <a class="navbar-item">
+              <a class="navbar-item" @click="router.push('/perfil')">
                 <span class="icon">
                   <i class="fas fa-user-edit"></i>
                 </span>
                 <span>Meu Perfil</span>
               </a>
-              <a class="navbar-item">
+              <a class="navbar-item" @click="router.push('/meus-pets')">
                 <span class="icon">
                   <i class="fas fa-paw"></i>
                 </span>
@@ -232,7 +251,22 @@ const getStatusText = (status) => {
 
       <!-- Meus Pets -->
       <div class="section">
-        <h2 class="title is-3 mb-4">Meus Pets</h2>
+        <div class="columns is-vcentered mb-4">
+          <div class="column">
+            <h2 class="title is-3">Meus Pets</h2>
+          </div>
+          <div class="column is-narrow">
+            <button 
+              class="button is-primary"
+              @click="router.push('/meus-pets')"
+            >
+              <span class="icon">
+                <i class="fas fa-paw"></i>
+              </span>
+              <span>Gerenciar Pets</span>
+            </button>
+          </div>
+        </div>
         <div class="columns is-multiline">
           <div 
             v-for="animal in animais" 
@@ -489,8 +523,8 @@ const getStatusText = (status) => {
 }
 
 .modal-card {
-  max-width: 800px;
-  width: 90%;
+  max-width: 1000px;
+  width: 95%;
 }
 
 .modal-card-body {

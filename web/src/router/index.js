@@ -18,6 +18,16 @@ const routes = [
     component: () => import('../views/ClienteDashboard.vue')
   },
   {
+    path: '/perfil',
+    name: 'Perfil',
+    component: () => import('../views/Perfil.vue')
+  },
+  {
+    path: '/meus-pets',
+    name: 'MeusPets',
+    component: () => import('../views/MeusPets.vue')
+  },
+  {
     path: '/admin',
     name: 'Admin',
     component: () => import('../views/admin/AdminLayout.vue'),
