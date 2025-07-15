@@ -1,8 +1,10 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useBrand } from '../composables/useBrand.js'
 
 const router = useRouter()
+const { brandConfig } = useBrand()
 
 const user = ref({
   nome: 'João Silva',
@@ -51,7 +53,7 @@ const voltar = () => {
             <span class="icon">
               <i class="fas fa-paw"></i>
             </span>
-            <span>AgendaVet - Meu Perfil</span>
+            <span>{{ brandConfig?.nome_estabelecimento || 'AgendaVet' }} - Meu Perfil</span>
           </span>
         </div>
       </div>

@@ -35,7 +35,7 @@ class AdminService {
       return [
         {
           id: 1,
-          data: '2025-01-15',
+          data: '2025-08-15',
           horario: '14:00',
           cliente: 'João Silva',
           pet: 'Rex',
@@ -46,7 +46,7 @@ class AdminService {
         },
         {
           id: 2,
-          data: '2025-01-15',
+          data: '2025-08-15',
           horario: '15:30',
           cliente: 'Maria Santos',
           pet: 'Luna',
@@ -57,7 +57,7 @@ class AdminService {
         },
         {
           id: 3,
-          data: '2025-01-16',
+          data: '2025-08-16',
           horario: '09:00',
           cliente: 'Pedro Costa',
           pet: 'Thor',
@@ -210,6 +210,68 @@ class AdminService {
       })
     } catch (error) {
       console.error('Erro ao buscar relatório financeiro:', error)
+      throw error
+    }
+  }
+
+  // ===== CONFIGURAÇÕES DE MARCA =====
+  
+  // Buscar configuração de marca ativa
+  async getBrandConfig() {
+    try {
+      return await apiService.get('/brand/ativa/')
+    } catch (error) {
+      console.error('Erro ao buscar configuração de marca:', error)
+      throw error
+    }
+  }
+
+  // Listar todas as configurações de marca
+  async getAllBrandConfigs() {
+    try {
+      return await apiService.get('/brand/')
+    } catch (error) {
+      console.error('Erro ao buscar configurações:', error)
+      throw error
+    }
+  }
+
+  // Criar nova configuração de marca
+  async createBrandConfig(brandData) {
+    try {
+      return await apiService.post('/brand/', brandData)
+    } catch (error) {
+      console.error('Erro ao criar configuração:', error)
+      throw error
+    }
+  }
+
+  // Atualizar configuração de marca
+  async updateBrandConfig(id, brandData) {
+    try {
+      return await apiService.put(`/brand/${id}/`, brandData)
+    } catch (error) {
+      console.error('Erro ao atualizar configuração:', error)
+      throw error
+    }
+  }
+
+  // Ativar configuração de marca
+  async activateBrandConfig(id) {
+    try {
+      return await apiService.post(`/brand/${id}/ativar/`)
+    } catch (error) {
+      console.error('Erro ao ativar configuração:', error)
+      throw error
+    }
+  }
+
+  // Deletar configuração de marca
+  async deleteBrandConfig(id) {
+    try {
+      return await apiService.delete(`/brand/${id}/`)
+    } catch (error) {
+      console.error('Erro ao deletar configuração:', error)
       throw error
     }
   }

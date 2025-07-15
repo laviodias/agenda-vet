@@ -1,5 +1,8 @@
 <script setup>
 import { RouterLink, RouterView } from 'vue-router'
+import { useBrand } from '../../composables/useBrand.js'
+
+const { brandConfig } = useBrand()
 </script>
 
 <template>
@@ -11,7 +14,7 @@ import { RouterLink, RouterView } from 'vue-router'
             <span class="icon">
               <i class="fas fa-paw"></i>
             </span>
-            <span>AgendaVet Admin</span>
+            <span>{{ brandConfig?.nome_estabelecimento || 'AgendaVet' }} Admin</span>
           </span>
         </RouterLink>
       </div>
@@ -42,6 +45,15 @@ import { RouterLink, RouterView } from 'vue-router'
                 <i class="fas fa-calendar-alt"></i>
               </span>
               <span>Agenda</span>
+            </span>
+          </RouterLink>
+
+          <RouterLink class="navbar-item" to="/admin/marca">
+            <span class="icon-text">
+              <span class="icon">
+                <i class="fas fa-palette"></i>
+              </span>
+              <span>Marca</span>
             </span>
           </RouterLink>
         </div>

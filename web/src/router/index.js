@@ -51,6 +51,11 @@ const routes = [
         path: 'agenda',
         name: 'Agenda',
         component: () => import('../views/admin/Agenda.vue')
+      },
+      {
+        path: 'marca',
+        name: 'Marca',
+        component: () => import('../views/admin/Marca.vue')
       }
     ]
   }

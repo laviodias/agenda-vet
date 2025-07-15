@@ -2,8 +2,10 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AgendamentoForm from '../components/AgendamentoForm.vue'
+import { useBrand } from '../composables/useBrand.js'
 
 const router = useRouter()
+const { brandConfig } = useBrand()
 
 const user = ref({
   nome: 'João Silva',
@@ -134,7 +136,7 @@ const getStatusText = (status) => {
             <span class="icon">
               <i class="fas fa-paw"></i>
             </span>
-            <span>AgendaVet - Cliente</span>
+            <span>{{ brandConfig?.nome_estabelecimento || 'AgendaVet' }} - Cliente</span>
           </span>
         </div>
       </div>

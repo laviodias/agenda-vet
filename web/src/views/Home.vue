@@ -3,8 +3,10 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AgendamentoForm from '../components/AgendamentoForm.vue';
 import publicService from '../services/publicService.js'
+import { useBrand } from '../composables/useBrand.js'
 
 const router = useRouter()
+const { brandConfig } = useBrand()
 
 const servicos = ref([])
 const profissionais = ref([])
@@ -71,9 +73,21 @@ const goToAuth = () => {
         <div class="container">
           <div class="columns is-vcentered">
             <div class="column is-6">
-              <h1 class="title is-2 has-text-white">
+              <!-- Logo e nome da clínica -->
+              <div class="clinic-branding mb-4">
+                <div v-if="brandConfig?.logo_url" class="clinic-logo mb-3">
+                  <figure class="image is-96x96">
+                    <img :src="brandConfig.logo_url" :alt="brandConfig.nome_estabelecimento" class="is-rounded">
+                  </figure>
+                </div>
+                <h1 class="title is-1 has-text-white clinic-name">
+                  {{ brandConfig?.nome_estabelecimento || 'AgendaVet' }}
+                </h1>
+              </div>
+              
+              <h2 class="title is-3 has-text-white">
                 Cuidado especial para seu pet
-              </h1>
+              </h2>
               <p class="subtitle is-5 has-text-white-ter">
                 Agende consultas veterinárias de forma simples e rápida. 
                 Cuidamos da saúde do seu melhor amigo com carinho e profissionalismo.
@@ -237,26 +251,36 @@ const goToAuth = () => {
                 <p class="mt-3">Carregando informações...</p>
               </div>
 
-              <div v-else-if="infoClinica" class="contact-info">
-                <div class="contact-item">
+              <div v-else class="contact-info">
+                <!-- Usar dados da configuração de marca se disponíveis, senão usar dados da clínica -->
+                <div v-if="brandConfig?.endereco || infoClinica?.endereco" class="contact-item">
                   <span class="icon has-text-primary">
                     <i class="fas fa-map-marker-alt"></i>
                   </span>
-                  <span>{{ infoClinica.endereco }}</span>
+                  <span>{{ brandConfig?.endereco || infoClinica?.endereco }}</span>
                 </div>
                 
-                <div class="contact-item">
+                <div v-if="brandConfig?.telefone || infoClinica?.telefone" class="contact-item">
                   <span class="icon has-text-primary">
                     <i class="fas fa-phone"></i>
                   </span>
-                  <span>{{ infoClinica.telefone }}</span>
+                  <span>{{ brandConfig?.telefone || infoClinica?.telefone }}</span>
                 </div>
                 
-                <div class="contact-item">
+                <div v-if="brandConfig?.email || infoClinica?.email" class="contact-item">
                   <span class="icon has-text-primary">
                     <i class="fas fa-envelope"></i>
                   </span>
-                  <span>{{ infoClinica.email }}</span>
+                  <span>{{ brandConfig?.email || infoClinica?.email }}</span>
+                </div>
+                
+                <div v-if="brandConfig?.website" class="contact-item">
+                  <span class="icon has-text-primary">
+                    <i class="fas fa-globe"></i>
+                  </span>
+                  <a :href="brandConfig.website" target="_blank" class="has-text-primary">
+                    {{ brandConfig.website }}
+                  </a>
                 </div>
               </div>
 
@@ -279,10 +303,29 @@ const goToAuth = () => {
 
 <style scoped>
 .hero {
-  background: linear-gradient(135deg, #3273dc 0%, #209cee 100%);
+  background: linear-gradient(135deg, var(--primary-color, #3273dc) 0%, var(--accent-color, #209cee) 100%);
   min-height: 60vh;
   display: flex;
   align-items: center;
+}
+
+.clinic-branding {
+  text-align: center;
+}
+
+.clinic-logo {
+  display: flex;
+  justify-content: center;
+}
+
+.clinic-logo img {
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.clinic-name {
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  margin-bottom: 0.5rem !important;
 }
 
 .hero-image {

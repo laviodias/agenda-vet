@@ -2,8 +2,10 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import authService from '../services/authService.js'
+import { useBrand } from '../composables/useBrand.js'
 
 const router = useRouter()
+const { brandConfig } = useBrand()
 
 const registerData = reactive({
   nome: '',
@@ -159,7 +161,7 @@ const formatPhone = (value) => {
         <div class="logo">
           <i class="fas fa-paw"></i>
         </div>
-        <h1 class="title is-3">Cadastre-se no AgendaVet</h1>
+        <h1 class="title is-3">Cadastre-se no {{ brandConfig?.nome_estabelecimento || 'AgendaVet' }}</h1>
         <p class="subtitle">Crie sua conta e agende consultas para seu pet</p>
         
         <div class="steps">

@@ -1,8 +1,10 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useBrand } from '../composables/useBrand.js'
 
 const router = useRouter()
+const { brandConfig } = useBrand()
 
 const animais = ref([
   {
@@ -118,7 +120,7 @@ const agendarParaPet = (animal) => {
             <span class="icon">
               <i class="fas fa-paw"></i>
             </span>
-            <span>AgendaVet - Meus Pets</span>
+            <span>{{ brandConfig?.nome_estabelecimento || 'AgendaVet' }} - Meus Pets</span>
           </span>
         </div>
       </div>

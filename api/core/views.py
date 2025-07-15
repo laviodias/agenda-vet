@@ -1,21 +1,95 @@
 from django.shortcuts import render
 from rest_framework import viewsets, status, permissions
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from django.utils import timezone
 from datetime import datetime, timedelta
 from django.db.models import Count, Sum, Q
-from .models import Empresa
+from .models import Empresa, Usuario, ConfiguracaoBrand
 from agendamentos.models import Agendamento
 from servicos.models import Servico
-from usuarios.models import Usuario
-from .serializers import EmpresaSerializer
+from .serializers import EmpresaSerializer, UsuarioSerializer, ConfiguracaoBrandSerializer
 
 # Create your views here.
 
 class EmpresaViewSet(viewsets.ModelViewSet):
     queryset = Empresa.objects.all()
     serializer_class = EmpresaSerializer
+
+class UsuarioViewSet(viewsets.ModelViewSet):
+    queryset = Usuario.objects.all()
+    serializer_class = UsuarioSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class ConfiguracaoBrandViewSet(viewsets.ModelViewSet):
+    queryset = ConfiguracaoBrand.objects.all()
+    serializer_class = ConfiguracaoBrandSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_permissions(self):
+        """
+        Definir permissões: ativa é público, GET para todos autenticados, POST/PUT/DELETE apenas para admins
+        """
+        if self.action == 'ativa':
+            permission_classes = [permissions.AllowAny]
+        elif self.action in ['list', 'retrieve']:
+            permission_classes = [permissions.IsAuthenticated]
+        else:
+            permission_classes = [permissions.IsAdminUser]
+        return [permission() for permission in permission_classes]
+    
+    @action(detail=False, methods=['get'])
+    def ativa(self, request):
+        """
+        Endpoint para buscar a configuração de marca ativa
+        """
+        configuracao = ConfiguracaoBrand.get_configuracao_ativa()
+        if configuracao:
+            serializer = self.get_serializer(configuracao, context={'request': request})
+            return Response(serializer.data)
+        return Response({'message': 'Nenhuma configuração encontrada'}, status=status.HTTP_404_NOT_FOUND)
+    
+    @action(detail=True, methods=['post'])
+    def ativar(self, request, pk=None):
+        """
+        Endpoint para ativar uma configuração específica
+        """
+        configuracao = self.get_object()
+        # Desativar todas as outras configurações
+        ConfiguracaoBrand.objects.filter(ativo=True).update(ativo=False)
+        # Ativar a configuração selecionada
+        configuracao.ativo = True
+        configuracao.save()
+        
+        serializer = self.get_serializer(configuracao, context={'request': request})
+        return Response({
+            'message': 'Configuração ativada com sucesso',
+            'configuracao': serializer.data
+        })
+    
+    def create(self, request, *args, **kwargs):
+        """
+        Sobrescrever create para automaticamente desativar outras configurações
+        """
+        # Se a nova configuração está sendo marcada como ativa, desativar outras
+        if request.data.get('ativo', False):
+            ConfiguracaoBrand.objects.filter(ativo=True).update(ativo=False)
+        
+        return super().create(request, *args, **kwargs)
+    
+    def update(self, request, *args, **kwargs):
+        """
+        Sobrescrever update para gerenciar ativação
+        """
+        instance = self.get_object()
+        
+        # Se está ativando esta configuração, desativar outras
+        if request.data.get('ativo', False) and not instance.ativo:
+            ConfiguracaoBrand.objects.filter(ativo=True).update(ativo=False)
+        
+        return super().update(request, *args, **kwargs)
+
 
 @api_view(['GET'])
 @permission_classes([permissions.AllowAny])
