@@ -2,6 +2,7 @@ from django.shortcuts import render
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser
 from django.utils import timezone
 from datetime import datetime, timedelta
 from django.db.models import Count, Sum, Q
@@ -26,18 +27,28 @@ class ConfiguracaoBrandViewSet(viewsets.ModelViewSet):
     queryset = ConfiguracaoBrand.objects.all()
     serializer_class = ConfiguracaoBrandSerializer
     permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
     
     def get_permissions(self):
         """
-        Definir permissões: ativa é público, GET para todos autenticados, POST/PUT/DELETE apenas para admins
+        Definir permissões: ativa é público, GET para todos autenticados, POST/PUT/DELETE para staff
         """
         if self.action == 'ativa':
             permission_classes = [permissions.AllowAny]
         elif self.action in ['list', 'retrieve']:
             permission_classes = [permissions.IsAuthenticated]
         else:
-            permission_classes = [permissions.IsAdminUser]
+            # Usar IsAdminUser ou verificar se é staff
+            permission_classes = [permissions.IsAuthenticated]
         return [permission() for permission in permission_classes]
+    
+    def check_admin_permission(self, request):
+        """
+        Verificar se o usuário tem permissão de admin
+        """
+        if not request.user.is_authenticated:
+            return False
+        return request.user.is_staff or request.user.is_superuser or getattr(request.user, 'tipo_usuario', '') == 'admin'
     
     @action(detail=False, methods=['get'])
     def ativa(self, request):
@@ -68,10 +79,57 @@ class ConfiguracaoBrandViewSet(viewsets.ModelViewSet):
             'configuracao': serializer.data
         })
     
+    @action(detail=True, methods=['patch'], parser_classes=[MultiPartParser, FormParser])
+    def upload_logo(self, request, pk=None):
+        """
+        Endpoint específico para upload de logo
+        """
+        # Verificar permissão de admin
+        if not self.check_admin_permission(request):
+            return Response({'error': 'Permissão negada'}, status=status.HTTP_403_FORBIDDEN)
+        
+        configuracao = self.get_object()
+        
+        print(f"Request FILES: {request.FILES}")
+        print(f"Request content type: {request.content_type}")
+        
+        if 'logo' not in request.FILES:
+            return Response({'error': 'Nenhum arquivo foi enviado'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        logo_file = request.FILES['logo']
+        
+        print(f"Logo file: {logo_file}")
+        print(f"Logo file size: {logo_file.size}")
+        print(f"Logo file content type: {logo_file.content_type}")
+        
+        # Validar arquivo
+        if logo_file.size > 2 * 1024 * 1024:
+            return Response({'error': 'Arquivo muito grande. Máximo 2MB.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif']
+        if logo_file.content_type not in allowed_types:
+            return Response({'error': 'Tipo de arquivo não permitido. Use JPG, PNG ou GIF.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Salvar o arquivo
+        configuracao.logo = logo_file
+        configuracao.save()
+        
+        print(f"Logo saved successfully: {configuracao.logo.url}")
+        
+        serializer = self.get_serializer(configuracao, context={'request': request})
+        return Response({
+            'message': 'Logo atualizado com sucesso',
+            'configuracao': serializer.data
+        })
+    
     def create(self, request, *args, **kwargs):
         """
         Sobrescrever create para automaticamente desativar outras configurações
         """
+        # Verificar permissão de admin
+        if not self.check_admin_permission(request):
+            return Response({'error': 'Permissão negada'}, status=status.HTTP_403_FORBIDDEN)
+        
         # Se a nova configuração está sendo marcada como ativa, desativar outras
         if request.data.get('ativo', False):
             ConfiguracaoBrand.objects.filter(ativo=True).update(ativo=False)
@@ -80,15 +138,45 @@ class ConfiguracaoBrandViewSet(viewsets.ModelViewSet):
     
     def update(self, request, *args, **kwargs):
         """
-        Sobrescrever update para gerenciar ativação
+        Sobrescrever update para gerenciar ativação e upload de arquivos
         """
+        # Verificar permissão de admin
+        if not self.check_admin_permission(request):
+            return Response({'error': 'Permissão negada'}, status=status.HTTP_403_FORBIDDEN)
+        
         instance = self.get_object()
+        
+        # Log para debug
+        print(f"Update request data: {request.data}")
+        print(f"Files: {request.FILES}")
         
         # Se está ativando esta configuração, desativar outras
         if request.data.get('ativo', False) and not instance.ativo:
             ConfiguracaoBrand.objects.filter(ativo=True).update(ativo=False)
         
-        return super().update(request, *args, **kwargs)
+        # Se é um upload de arquivo, usar partial=True
+        partial = kwargs.pop('partial', False)
+        if 'logo' in request.FILES:
+            partial = True
+            
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        if getattr(instance, '_prefetched_objects_cache', None):
+            instance._prefetched_objects_cache = {}
+
+        return Response(serializer.data)
+    
+    def destroy(self, request, *args, **kwargs):
+        """
+        Sobrescrever delete para verificar permissões
+        """
+        # Verificar permissão de admin
+        if not self.check_admin_permission(request):
+            return Response({'error': 'Permissão negada'}, status=status.HTTP_403_FORBIDDEN)
+        
+        return super().destroy(request, *args, **kwargs)
 
 
 @api_view(['GET'])

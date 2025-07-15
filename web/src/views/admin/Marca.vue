@@ -54,6 +54,7 @@ const carregarDados = async () => {
 
 // Abrir formulário para nova configuração
 const novaConfiguracao = () => {
+  originalData.value = null // Limpar dados originais
   formData.value = {
     nome_estabelecimento: '',
     cor_primaria: '#00d1b2',
@@ -72,13 +73,28 @@ const novaConfiguracao = () => {
   showForm.value = true
 }
 
+// Dados originais para comparação
+const originalData = ref(null)
+
 // Editar configuração existente
 const editarConfiguracao = (config) => {
+  originalData.value = { ...config } // Salvar dados originais
   formData.value = { ...config }
   logoFile.value = null
   logoPreview.value = config.logo_url || null
   editando.value = true
   showForm.value = true
+}
+
+// Verificar se os dados do formulário mudaram (exceto logo)
+const formDataChanged = () => {
+  if (!editando.value || !originalData.value) return true // Novo registro sempre salva
+  
+  const fieldsToCompare = ['nome_estabelecimento', 'cor_primaria', 'cor_secundaria', 'cor_accent', 'cor_background', 'endereco', 'telefone', 'email', 'website', 'ativo']
+  
+  return fieldsToCompare.some(field => {
+    return formData.value[field] !== originalData.value[field]
+  })
 }
 
 // Salvar configuração
@@ -90,24 +106,56 @@ const salvarConfiguracao = async () => {
 
   loading.value = true
   try {
-    let resultado
+    let resultado = formData.value // Usar dados atuais como base
+    
+    const hasFormChanges = formDataChanged()
+    const hasLogoChange = logoFile.value !== null
+    
+    console.log('Mudanças detectadas:', { hasFormChanges, hasLogoChange })
 
-    if (editando.value) {
-      resultado = await adminService.updateBrandConfig(formData.value.id, formData.value)
-    } else {
-      resultado = await adminService.createBrandConfig(formData.value)
+    // 1. Se mudaram dados do formulário, salvar configuração
+    if (hasFormChanges) {
+      console.log('Salvando dados do formulário...')
+      
+      // Preparar dados sem o logo
+      const dataToSend = { ...formData.value }
+      delete dataToSend.logo
+
+      if (editando.value) {
+        resultado = await adminService.updateBrandConfig(formData.value.id, dataToSend)
+      } else {
+        resultado = await adminService.createBrandConfig(dataToSend)
+      }
+      
+      console.log('Dados do formulário salvos:', resultado)
     }
 
-    // Se há um arquivo de logo, fazer o upload separadamente
-    if (logoFile.value && resultado.id) {
+    // 2. Se mudou o logo, fazer upload separadamente
+    if (hasLogoChange && resultado.id) {
       try {
-        const formDataLogo = new FormData()
-        formDataLogo.append('logo', logoFile.value)
-        await brandService.uploadLogo(resultado.id, logoFile.value)
+        console.log('Fazendo upload do logo...', logoFile.value.name, logoFile.value.size, 'bytes')
+        const logoResult = await brandService.uploadLogo(resultado.id, logoFile.value)
+        console.log('Upload do logo bem-sucedido:', logoResult)
+        resultado = logoResult.configuracao || logoResult // Usar o resultado com logo atualizado
       } catch (uploadError) {
-        console.error('Erro no upload do logo:', uploadError)
-        // Continuar mesmo se o upload falhar
+        console.error('Erro detalhado no upload do logo:', uploadError)
+        const errorMsg = uploadError.response?.data?.error || uploadError.message || 'Erro desconhecido'
+        
+        if (hasFormChanges) {
+          alert(`Configuração salva, mas houve erro no upload do logo: ${errorMsg}`)
+        } else {
+          alert(`Erro no upload do logo: ${errorMsg}`)
+          loading.value = false
+          return
+        }
       }
+    }
+
+    // 3. Se não houve nenhuma mudança
+    if (!hasFormChanges && !hasLogoChange) {
+      alert('Nenhuma alteração foi detectada.')
+      loading.value = false
+      return
     }
 
     showForm.value = false
@@ -117,6 +165,8 @@ const salvarConfiguracao = async () => {
     if (formData.value.ativo) {
       brandService.aplicarTema(resultado)
     }
+
+    alert('Configuração salva com sucesso!')
     
   } catch (error) {
     console.error('Erro ao salvar configuração:', error)

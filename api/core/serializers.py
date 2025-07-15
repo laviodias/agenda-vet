@@ -28,6 +28,22 @@ class ConfiguracaoBrandSerializer(serializers.ModelSerializer):
             'criado_em', 'atualizado_em', 'ativo'
         ]
         read_only_fields = ['id', 'criado_em', 'atualizado_em']
+        
+    def validate_logo(self, value):
+        """
+        Validar arquivo de logo
+        """
+        if value:
+            # Verificar tamanho (máx 2MB)
+            if value.size > 2 * 1024 * 1024:
+                raise serializers.ValidationError("O arquivo deve ter no máximo 2MB.")
+            
+            # Verificar tipo de arquivo
+            allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif']
+            if value.content_type not in allowed_types:
+                raise serializers.ValidationError("Apenas arquivos JPG, PNG e GIF são permitidos.")
+        
+        return value
     
     def get_logo_url(self, obj):
         """

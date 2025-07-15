@@ -79,11 +79,8 @@ class BrandService {
       const formData = new FormData()
       formData.append('logo', logoFile)
       
-      return await apiService.patch(`/brand/${id}/`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      })
+      // Usar endpoint específico para upload de logo
+      return await apiService.patch(`/brand/${id}/upload_logo/`, formData)
     } catch (error) {
       console.error('Erro ao fazer upload do logo:', error)
       throw error
