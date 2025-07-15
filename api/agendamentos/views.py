@@ -8,18 +8,96 @@ from .models import DisponibilidadeAgenda, Agendamento
 from .serializers import DisponibilidadeAgendaSerializer, AgendamentoSerializer
 from servicos.models import Servico
 from usuarios.models import Usuario
+from core.permissions import PermissionChecker, require_permission, HasPermission
 
 # Create your views here.
 
 class DisponibilidadeAgendaViewSet(viewsets.ModelViewSet):
     queryset = DisponibilidadeAgenda.objects.all()
     serializer_class = DisponibilidadeAgendaSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_permissions(self):
+        """
+        Definir permissões baseadas no sistema de roles
+        """
+        if self.action in ['list', 'retrieve']:
+            # Leitura de disponibilidade pode ser feita por qualquer usuário autenticado
+            permission_classes = [permissions.IsAuthenticated]
+        else:
+            # Modificações requerem permissão específica
+            permission_classes = [permissions.IsAuthenticated]
+        return [permission() for permission in permission_classes]
+    
+    def create(self, request, *args, **kwargs):
+        # Verificar permissão para gerenciar agendamentos
+        if not PermissionChecker.check_permission(request.user, 'agendamentos', 'manage'):
+            return PermissionChecker.get_permission_response('Você não tem permissão para gerenciar disponibilidade')
+        return super().create(request, *args, **kwargs)
+    
+    def update(self, request, *args, **kwargs):
+        # Verificar permissão para gerenciar agendamentos
+        if not PermissionChecker.check_permission(request.user, 'agendamentos', 'manage'):
+            return PermissionChecker.get_permission_response('Você não tem permissão para gerenciar disponibilidade')
+        return super().update(request, *args, **kwargs)
+    
+    def destroy(self, request, *args, **kwargs):
+        # Verificar permissão para gerenciar agendamentos
+        if not PermissionChecker.check_permission(request.user, 'agendamentos', 'manage'):
+            return PermissionChecker.get_permission_response('Você não tem permissão para gerenciar disponibilidade')
+        return super().destroy(request, *args, **kwargs)
+
 
 class AgendamentoViewSet(viewsets.ModelViewSet):
     queryset = Agendamento.objects.all()
     serializer_class = AgendamentoSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        """
+        Filtrar agendamentos baseado no role do usuário
+        """
+        user = self.request.user
+        
+        # Admins e profissionais veem todos os agendamentos
+        if PermissionChecker.check_permission(user, 'agendamentos', 'list'):
+            return Agendamento.objects.all()
+        
+        # Clientes veem apenas seus próprios agendamentos
+        return Agendamento.objects.filter(cliente=user)
+    
+    def create(self, request, *args, **kwargs):
+        # Qualquer usuário autenticado pode criar agendamento
+        return super().create(request, *args, **kwargs)
+    
+    def update(self, request, *args, **kwargs):
+        agendamento = self.get_object()
+        
+        # Cliente pode editar apenas seus próprios agendamentos
+        if agendamento.cliente == request.user:
+            return super().update(request, *args, **kwargs)
+        
+        # Profissionais/admins podem editar qualquer agendamento
+        if PermissionChecker.check_permission(request.user, 'agendamentos', 'update'):
+            return super().update(request, *args, **kwargs)
+        
+        return PermissionChecker.get_permission_response('Você não tem permissão para editar este agendamento')
+    
+    def destroy(self, request, *args, **kwargs):
+        agendamento = self.get_object()
+        
+        # Cliente pode cancelar apenas seus próprios agendamentos
+        if agendamento.cliente == request.user:
+            return super().destroy(request, *args, **kwargs)
+        
+        # Profissionais/admins podem cancelar qualquer agendamento
+        if PermissionChecker.check_permission(request.user, 'agendamentos', 'delete'):
+            return super().destroy(request, *args, **kwargs)
+        
+        return PermissionChecker.get_permission_response('Você não tem permissão para cancelar este agendamento')
 
 @api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
 def listar_agendamentos_cliente(request):
     """
     Lista agendamentos do cliente logado

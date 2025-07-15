@@ -41,38 +41,40 @@ class AuthService {
     }
   }
 
-  // Logout
-  logout() {
-    apiService.removeToken()
-    localStorage.removeItem('user')
-  }
-
-  // Verificar se está autenticado
-  isAuthenticated() {
-    return apiService.isAuthenticated()
-  }
-
   // Obter dados do usuário atual
   getCurrentUser() {
     const user = localStorage.getItem('user')
     return user ? JSON.parse(user) : null
   }
 
-  // Salvar dados do usuário
+  // Salvar usuário no localStorage
   setCurrentUser(user) {
     localStorage.setItem('user', JSON.stringify(user))
   }
 
-  // Verificar se é admin
-  isAdmin() {
-    const user = this.getCurrentUser()
-    return user && user.tipo === 'admin'
+  // Remover usuário do localStorage
+  removeCurrentUser() {
+    localStorage.removeItem('user')
   }
 
-  // Verificar se é cliente
-  isCliente() {
-    const user = this.getCurrentUser()
-    return user && user.tipo === 'cliente'
+  // Verificar se está autenticado
+  isAuthenticated() {
+    return !!localStorage.getItem('token')
+  }
+
+  // Logout
+  logout() {
+    this.removeToken()
+    this.removeCurrentUser()
+  }
+
+  // Gerenciar token
+  setToken(token) {
+    localStorage.setItem('token', token)
+  }
+
+  removeToken() {
+    localStorage.removeItem('token')
   }
 }
 

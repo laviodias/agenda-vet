@@ -1,8 +1,15 @@
 <script setup>
-import { RouterLink, RouterView } from 'vue-router'
+import { RouterLink, RouterView, useRouter } from 'vue-router'
 import { useBrand } from '../../composables/useBrand.js'
+import authService from '../../services/authService.js'
 
 const { brandConfig } = useBrand()
+const router = useRouter()
+
+const logout = () => {
+  authService.logout()
+  router.push('/auth')
+}
 </script>
 
 <template>
@@ -60,12 +67,12 @@ const { brandConfig } = useBrand()
 
         <div class="navbar-end">
           <div class="navbar-item">
-            <RouterLink class="button is-light" to="/">
+            <button class="button is-light" @click="logout">
               <span class="icon">
                 <i class="fas fa-sign-out-alt"></i>
               </span>
               <span>Sair</span>
-            </RouterLink>
+            </button>
           </div>
         </div>
       </div>

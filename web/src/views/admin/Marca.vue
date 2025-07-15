@@ -111,12 +111,8 @@ const salvarConfiguracao = async () => {
     const hasFormChanges = formDataChanged()
     const hasLogoChange = logoFile.value !== null
     
-    console.log('Mudanças detectadas:', { hasFormChanges, hasLogoChange })
-
     // 1. Se mudaram dados do formulário, salvar configuração
     if (hasFormChanges) {
-      console.log('Salvando dados do formulário...')
-      
       // Preparar dados sem o logo
       const dataToSend = { ...formData.value }
       delete dataToSend.logo
@@ -126,19 +122,14 @@ const salvarConfiguracao = async () => {
       } else {
         resultado = await adminService.createBrandConfig(dataToSend)
       }
-      
-      console.log('Dados do formulário salvos:', resultado)
     }
 
     // 2. Se mudou o logo, fazer upload separadamente
     if (hasLogoChange && resultado.id) {
       try {
-        console.log('Fazendo upload do logo...', logoFile.value.name, logoFile.value.size, 'bytes')
         const logoResult = await brandService.uploadLogo(resultado.id, logoFile.value)
-        console.log('Upload do logo bem-sucedido:', logoResult)
         resultado = logoResult.configuracao || logoResult // Usar o resultado com logo atualizado
       } catch (uploadError) {
-        console.error('Erro detalhado no upload do logo:', uploadError)
         const errorMsg = uploadError.response?.data?.error || uploadError.message || 'Erro desconhecido'
         
         if (hasFormChanges) {

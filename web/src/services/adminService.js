@@ -6,7 +6,7 @@ class AdminService {
   // Buscar estatísticas do dashboard
   async getDashboardStats() {
     try {
-      return await apiService.get('/admin/dashboard/stats')
+      return await apiService.get('/api/dashboard/')
     } catch (error) {
       console.error('Erro ao buscar estatísticas:', error)
       // Retornar dados mockados em caso de erro
@@ -28,7 +28,7 @@ class AdminService {
   // Buscar agendamentos recentes
   async getAgendamentosRecentes() {
     try {
-      return await apiService.get('/admin/agendamentos/recentes')
+      return await apiService.get('/api/agendamentos_recentes/')
     } catch (error) {
       console.error('Erro ao buscar agendamentos recentes:', error)
       // Retornar dados mockados em caso de erro

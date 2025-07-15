@@ -6,10 +6,13 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from django.utils import timezone
 from datetime import datetime, timedelta
 from django.db.models import Count, Sum, Q
-from .models import Empresa, Usuario, ConfiguracaoBrand
+from .models import Empresa, Usuario, ConfiguracaoBrand, Role, Permission, RolePermission, UserRole
 from agendamentos.models import Agendamento
 from servicos.models import Servico
-from .serializers import EmpresaSerializer, UsuarioSerializer, ConfiguracaoBrandSerializer
+from .serializers import (EmpresaSerializer, UsuarioSerializer, ConfiguracaoBrandSerializer,
+                         RoleSerializer, PermissionSerializer, RolePermissionSerializer, 
+                         UserRoleSerializer, AssignRoleSerializer, UserPermissionsSerializer)
+from .permissions import PermissionChecker, require_permission, HasPermission, require_role
 
 # Create your views here.
 
@@ -31,24 +34,28 @@ class ConfiguracaoBrandViewSet(viewsets.ModelViewSet):
     
     def get_permissions(self):
         """
-        Definir permissões: ativa é público, GET para todos autenticados, POST/PUT/DELETE para staff
+        Definir permissões baseadas no novo sistema de roles
         """
         if self.action == 'ativa':
+            # Endpoint público para buscar configuração ativa
             permission_classes = [permissions.AllowAny]
         elif self.action in ['list', 'retrieve']:
+            # Leitura requer permissão de visualizar configurações
             permission_classes = [permissions.IsAuthenticated]
         else:
-            # Usar IsAdminUser ou verificar se é staff
+            # Modificações requerem permissão específica
             permission_classes = [permissions.IsAuthenticated]
         return [permission() for permission in permission_classes]
     
-    def check_admin_permission(self, request):
+    def check_brand_permission(self, request, action):
         """
-        Verificar se o usuário tem permissão de admin
+        Verificar se o usuário tem permissão para ações de marca/branding
         """
         if not request.user.is_authenticated:
             return False
-        return request.user.is_staff or request.user.is_superuser or getattr(request.user, 'tipo_usuario', '') == 'admin'
+        
+        # Verificar se tem permissão específica para brand
+        return PermissionChecker.check_permission(request.user, 'brand', action)
     
     @action(detail=False, methods=['get'])
     def ativa(self, request):
@@ -84,9 +91,9 @@ class ConfiguracaoBrandViewSet(viewsets.ModelViewSet):
         """
         Endpoint específico para upload de logo
         """
-        # Verificar permissão de admin
-        if not self.check_admin_permission(request):
-            return Response({'error': 'Permissão negada'}, status=status.HTTP_403_FORBIDDEN)
+        # Verificar permissão para atualizar marca
+        if not self.check_brand_permission(request, 'update'):
+            return PermissionChecker.get_permission_response('Você não tem permissão para fazer upload de logo')
         
         configuracao = self.get_object()
         
@@ -126,9 +133,9 @@ class ConfiguracaoBrandViewSet(viewsets.ModelViewSet):
         """
         Sobrescrever create para automaticamente desativar outras configurações
         """
-        # Verificar permissão de admin
-        if not self.check_admin_permission(request):
-            return Response({'error': 'Permissão negada'}, status=status.HTTP_403_FORBIDDEN)
+        # Verificar permissão para criar configurações de marca
+        if not self.check_brand_permission(request, 'create'):
+            return PermissionChecker.get_permission_response('Você não tem permissão para criar configurações de marca')
         
         # Se a nova configuração está sendo marcada como ativa, desativar outras
         if request.data.get('ativo', False):
@@ -140,9 +147,9 @@ class ConfiguracaoBrandViewSet(viewsets.ModelViewSet):
         """
         Sobrescrever update para gerenciar ativação e upload de arquivos
         """
-        # Verificar permissão de admin
-        if not self.check_admin_permission(request):
-            return Response({'error': 'Permissão negada'}, status=status.HTTP_403_FORBIDDEN)
+        # Verificar permissão para atualizar configurações de marca
+        if not self.check_brand_permission(request, 'update'):
+            return PermissionChecker.get_permission_response('Você não tem permissão para atualizar configurações de marca')
         
         instance = self.get_object()
         
@@ -172,9 +179,9 @@ class ConfiguracaoBrandViewSet(viewsets.ModelViewSet):
         """
         Sobrescrever delete para verificar permissões
         """
-        # Verificar permissão de admin
-        if not self.check_admin_permission(request):
-            return Response({'error': 'Permissão negada'}, status=status.HTTP_403_FORBIDDEN)
+        # Verificar permissão para deletar configurações de marca
+        if not self.check_brand_permission(request, 'delete'):
+            return PermissionChecker.get_permission_response('Você não tem permissão para deletar configurações de marca')
         
         return super().destroy(request, *args, **kwargs)
 
@@ -235,6 +242,7 @@ def horarios_funcionamento(request):
 
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
+@require_role('admin')
 def dashboard_stats(request):
     """
     Retorna estatísticas do dashboard para admin
@@ -292,6 +300,7 @@ def dashboard_stats(request):
 
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
+@require_role('admin')
 def agendamentos_recentes(request):
     """
     Retorna agendamentos recentes para o dashboard
@@ -322,3 +331,246 @@ def agendamentos_recentes(request):
             'error': 'Erro ao buscar agendamentos recentes',
             'detail': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class RoleViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gerenciamento de roles
+    """
+    queryset = Role.objects.all()
+    serializer_class = RoleSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_permissions(self):
+        """
+        Apenas administradores podem gerenciar roles
+        """
+        if self.action in ['list', 'retrieve']:
+            # Leitura para usuários autenticados
+            permission_classes = [permissions.IsAuthenticated]
+        else:
+            # Modificações apenas para admins
+            permission_classes = [permissions.IsAuthenticated]
+        return [permission() for permission in permission_classes]
+    
+    def create(self, request, *args, **kwargs):
+        # Verificar permissão para gerenciar usuários
+        if not PermissionChecker.check_permission(request.user, 'usuarios', 'manage'):
+            return PermissionChecker.get_permission_response('Você não tem permissão para criar roles')
+        return super().create(request, *args, **kwargs)
+    
+    def update(self, request, *args, **kwargs):
+        # Verificar permissão para gerenciar usuários
+        if not PermissionChecker.check_permission(request.user, 'usuarios', 'manage'):
+            return PermissionChecker.get_permission_response('Você não tem permissão para editar roles')
+        return super().update(request, *args, **kwargs)
+    
+    def destroy(self, request, *args, **kwargs):
+        # Verificar permissão para gerenciar usuários
+        if not PermissionChecker.check_permission(request.user, 'usuarios', 'manage'):
+            return PermissionChecker.get_permission_response('Você não tem permissão para deletar roles')
+        
+        role = self.get_object()
+        # Verificar se há usuários usando este role
+        if role.user_assignments.filter(is_active=True).exists():
+            return Response({
+                'error': 'Não é possível deletar role que está sendo usado por usuários',
+                'users_count': role.user_assignments.filter(is_active=True).count()
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        return super().destroy(request, *args, **kwargs)
+
+
+class PermissionViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet para visualização de permissões (somente leitura)
+    """
+    queryset = Permission.objects.all()
+    serializer_class = PermissionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_permissions(self):
+        """
+        Permissões de visualização para usuários autenticados
+        """
+        return [permissions.IsAuthenticated()]
+
+
+class RolePermissionViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gerenciar atribuições de permissões aos roles
+    """
+    queryset = RolePermission.objects.all()
+    serializer_class = RolePermissionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def create(self, request, *args, **kwargs):
+        # Verificar permissão para gerenciar usuários
+        if not PermissionChecker.check_permission(request.user, 'usuarios', 'manage'):
+            return PermissionChecker.get_permission_response('Você não tem permissão para atribuir permissões')
+        return super().create(request, *args, **kwargs)
+    
+    def destroy(self, request, *args, **kwargs):
+        # Verificar permissão para gerenciar usuários
+        if not PermissionChecker.check_permission(request.user, 'usuarios', 'manage'):
+            return PermissionChecker.get_permission_response('Você não tem permissão para remover permissões')
+        return super().destroy(request, *args, **kwargs)
+
+
+class UserRoleViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gerenciar atribuições de roles aos usuários
+    """
+    queryset = UserRole.objects.all()
+    serializer_class = UserRoleSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        """
+        Filtrar baseado nas permissões do usuário
+        """
+        user = self.request.user
+        
+        # Administradores veem todas as atribuições
+        if PermissionChecker.check_permission(user, 'usuarios', 'list'):
+            return UserRole.objects.all()
+        
+        # Usuários normais veem apenas suas próprias atribuições
+        return UserRole.objects.filter(user=user)
+    
+    def create(self, request, *args, **kwargs):
+        # Verificar permissão para gerenciar usuários
+        if not PermissionChecker.check_permission(request.user, 'usuarios', 'manage'):
+            return PermissionChecker.get_permission_response('Você não tem permissão para atribuir roles')
+        return super().create(request, *args, **kwargs)
+    
+    def update(self, request, *args, **kwargs):
+        # Verificar permissão para gerenciar usuários
+        if not PermissionChecker.check_permission(request.user, 'usuarios', 'manage'):
+            return PermissionChecker.get_permission_response('Você não tem permissão para editar atribuições de roles')
+        return super().update(request, *args, **kwargs)
+    
+    def destroy(self, request, *args, **kwargs):
+        user_role = self.get_object()
+        
+        # Usuário pode remover seus próprios roles (para sair de funções)
+        if user_role.user == request.user:
+            return super().destroy(request, *args, **kwargs)
+        
+        # Administradores podem remover qualquer atribuição
+        if not PermissionChecker.check_permission(request.user, 'usuarios', 'manage'):
+            return PermissionChecker.get_permission_response('Você não tem permissão para remover roles de outros usuários')
+        
+        return super().destroy(request, *args, **kwargs)
+    
+    @action(detail=False, methods=['post'])
+    def assign_role(self, request):
+        """
+        Endpoint para atribuir role a um usuário
+        """
+        if not PermissionChecker.check_permission(request.user, 'usuarios', 'manage'):
+            return PermissionChecker.get_permission_response('Você não tem permissão para atribuir roles')
+        
+        serializer = AssignRoleSerializer(data=request.data)
+        if serializer.is_valid():
+            user_id = serializer.validated_data['user_id']
+            role_id = serializer.validated_data['role_id']
+            
+            user = Usuario.objects.get(id=user_id)
+            role = Role.objects.get(id=role_id)
+            
+            # Usar o método do modelo para atribuir role
+            user_role = user.assign_role(role.name, assigned_by=request.user)
+            
+            if user_role:
+                response_serializer = UserRoleSerializer(user_role, context={'request': request})
+                return Response({
+                    'message': f'Role {role.display_name} atribuído com sucesso para {user.nome}',
+                    'user_role': response_serializer.data
+                }, status=status.HTTP_201_CREATED)
+            else:
+                return Response({
+                    'error': 'Não foi possível atribuir o role'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=False, methods=['post'])
+    def remove_role(self, request):
+        """
+        Endpoint para remover role de um usuário
+        """
+        if not PermissionChecker.check_permission(request.user, 'usuarios', 'manage'):
+            return PermissionChecker.get_permission_response('Você não tem permissão para remover roles')
+        
+        user_id = request.data.get('user_id')
+        role_name = request.data.get('role_name')
+        
+        if not user_id or not role_name:
+            return Response({
+                'error': 'user_id e role_name são obrigatórios'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            user = Usuario.objects.get(id=user_id)
+            user.remove_role(role_name)
+            
+            return Response({
+                'message': f'Role {role_name} removido com sucesso de {user.nome}'
+            })
+        except Usuario.DoesNotExist:
+            return Response({
+                'error': 'Usuário não encontrado'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def user_permissions(request, user_id=None):
+    """
+    Listar permissões de um usuário específico
+    """
+    if user_id is None:
+        user = request.user
+    else:
+        # Verificar se pode ver permissões de outros usuários
+        if not PermissionChecker.check_permission(request.user, 'usuarios', 'read') and request.user.id != user_id:
+            return PermissionChecker.get_permission_response('Você não tem permissão para ver permissões de outros usuários')
+        
+        try:
+            user = Usuario.objects.get(id=user_id)
+        except Usuario.DoesNotExist:
+            return Response({
+                'error': 'Usuário não encontrado'
+            }, status=status.HTTP_404_NOT_FOUND)
+    
+    roles = user.get_roles()
+    permissions = user.get_permissions()
+    
+    return Response({
+        'user': {
+            'id': user.id,
+            'nome': user.nome,
+            'email': user.email,
+            'tipo_usuario': user.tipo_usuario
+        },
+        'roles': [{'name': role.name, 'display_name': role.display_name, 'description': role.description} for role in roles],
+        'permissions': [{'resource': perm.resource, 'action': perm.action, 'description': perm.description, 'codename': perm.codename} for perm in permissions],
+        'total_roles': roles.count(),
+        'total_permissions': permissions.count()
+    })
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def can_access_admin(request):
+    """
+    Retorna se o usuário autenticado pode acessar a área admin (tem role admin)
+    """
+    user = request.user
+    print(f"[can_access_admin] Usuário autenticado: {user} (id={user.id}, email={getattr(user, 'email', None)})")
+    has_admin = False
+    if hasattr(user, 'has_role'):
+        has_admin = user.has_role('admin')
+    print(f"[can_access_admin] has_role('admin') = {has_admin}")
+    return Response({'can_access_admin': has_admin})

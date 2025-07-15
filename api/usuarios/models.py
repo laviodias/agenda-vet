@@ -31,3 +31,7 @@ class Usuario(AbstractUser):
 
   def __str__(self):
     return self.username
+
+  def has_role(self, role_name):
+    from core.models import UserRole  # Import local para evitar import circular
+    return UserRole.objects.filter(user=self, role__name=role_name, is_active=True).exists()

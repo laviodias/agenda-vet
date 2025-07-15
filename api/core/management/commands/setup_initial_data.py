@@ -52,6 +52,15 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS('Usuário admin criado com sucesso'))
         else:
             self.stdout.write('Usuário admin já existe')
+
+        # Atribuir role de admin ao usuário admin
+        try:
+            from core.models import Role, UserRole
+            admin_role = Role.objects.get(name='admin')
+            UserRole.objects.get_or_create(user=admin_user, role=admin_role, defaults={'is_active': True})
+            self.stdout.write(self.style.SUCCESS('Role admin atribuído ao usuário admin'))
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f'Erro ao atribuir role admin: {e}'))
         
         # Criar usuários clientes de teste
         clientes_data = [

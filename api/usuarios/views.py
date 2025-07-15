@@ -1,11 +1,12 @@
 from django.shortcuts import render
-from rest_framework import status, permissions
+from rest_framework import status, permissions, viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from .serializers import LoginSerializer, RegistroClienteSerializer, UsuarioSerializer
 from .models import Usuario
+from core.permissions import PermissionChecker, require_permission, HasPermission
 
 
 @api_view(['POST'])
@@ -102,3 +103,57 @@ def listar_profissionais(request):
             'error': 'Erro ao buscar profissionais',
             'detail': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class UsuarioViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gerenciamento de usuários com controle de acesso baseado em roles
+    """
+    queryset = Usuario.objects.all()
+    serializer_class = UsuarioSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        """
+        Filtrar usuários baseado no role do usuário logado
+        """
+        user = self.request.user
+        
+        # Administradores veem todos os usuários
+        if PermissionChecker.check_permission(user, 'usuarios', 'list'):
+            return Usuario.objects.all()
+        
+        # Usuários normais só veem seus próprios dados
+        return Usuario.objects.filter(id=user.id)
+    
+    def create(self, request, *args, **kwargs):
+        # Verificar permissão para criar usuários
+        if not PermissionChecker.check_permission(request.user, 'usuarios', 'create'):
+            return PermissionChecker.get_permission_response('Você não tem permissão para criar usuários')
+        return super().create(request, *args, **kwargs)
+    
+    def update(self, request, *args, **kwargs):
+        usuario = self.get_object()
+        
+        # Usuário pode editar seus próprios dados
+        if usuario == request.user:
+            return super().update(request, *args, **kwargs)
+        
+        # Administradores podem editar qualquer usuário
+        if PermissionChecker.check_permission(request.user, 'usuarios', 'update'):
+            return super().update(request, *args, **kwargs)
+        
+        return PermissionChecker.get_permission_response('Você não tem permissão para editar este usuário')
+    
+    def destroy(self, request, *args, **kwargs):
+        usuario = self.get_object()
+        
+        # Usuário não pode deletar a si mesmo
+        if usuario == request.user:
+            return PermissionChecker.get_permission_response('Você não pode deletar sua própria conta')
+        
+        # Verificar permissão para deletar usuários
+        if not PermissionChecker.check_permission(request.user, 'usuarios', 'delete'):
+            return PermissionChecker.get_permission_response('Você não tem permissão para deletar usuários')
+        
+        return super().destroy(request, *args, **kwargs)

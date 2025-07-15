@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AgendamentoForm from '../components/AgendamentoForm.vue'
 import { useBrand } from '../composables/useBrand.js'
+import authService from '../services/authService.js'
 
 const router = useRouter()
 const { brandConfig } = useBrand()
@@ -66,7 +67,7 @@ onMounted(() => {
 })
 
 const logout = () => {
-  // TODO: Implementar logout
+  authService.logout()
   router.push('/auth')
 }
 

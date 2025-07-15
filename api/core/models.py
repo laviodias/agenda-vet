@@ -1,30 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import AbstractUser
-
-class Usuario(AbstractUser):
-    nome = models.CharField(max_length=255)
-    email = models.EmailField(unique=True)
-    telefone = models.CharField(max_length=20, blank=True, null=True)
-    tipo_usuario = models.CharField(
-        max_length=20,
-        choices=[
-            ('admin', 'Administrador'),
-            ('veterinario', 'Veterinário'),
-            ('cliente', 'Cliente'),
-        ],
-        default='cliente'
-    )
-    crmv = models.CharField(max_length=20, blank=True, null=True)
-    especialidade = models.CharField(max_length=100, blank=True, null=True)
-    is_active = models.BooleanField(default=True)
-    date_joined = models.DateTimeField(auto_now_add=True)
-
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['nome']
-
-    def __str__(self):
-        return self.nome
-
+from usuarios.models import Usuario  # Use sempre o modelo de usuarios
 
 class Empresa(models.Model):
     nome = models.CharField(max_length=255, unique=True)
@@ -115,3 +90,160 @@ class ConfiguracaoBrand(models.Model):
                 nome_estabelecimento='AgendaVet',
                 ativo=True
             )
+
+
+class Role(models.Model):
+    """
+    Modelo para definir roles/funções no sistema
+    """
+    name = models.CharField(
+        max_length=50, 
+        unique=True,
+        help_text='Nome único do role (ex: admin, veterinario, recepcionista)'
+    )
+    display_name = models.CharField(
+        max_length=100,
+        help_text='Nome amigável para exibição (ex: Administrador, Veterinário)'
+    )
+    description = models.TextField(
+        blank=True, 
+        null=True,
+        help_text='Descrição das responsabilidades deste role'
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text='Se este role está ativo e pode ser atribuído'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Role'
+        verbose_name_plural = 'Roles'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.display_name
+
+
+class Permission(models.Model):
+    """
+    Modelo para definir permissões específicas no sistema
+    """
+    RESOURCE_CHOICES = [
+        ('usuarios', 'Usuários'),
+        ('agendamentos', 'Agendamentos'),
+        ('animais', 'Animais'),
+        ('servicos', 'Serviços'),
+        ('configuracoes', 'Configurações'),
+        ('relatorios', 'Relatórios'),
+        ('brand', 'Marca/Branding'),
+    ]
+    
+    ACTION_CHOICES = [
+        ('create', 'Criar'),
+        ('read', 'Visualizar'),
+        ('update', 'Editar'),
+        ('delete', 'Excluir'),
+        ('list', 'Listar'),
+        ('manage', 'Gerenciar'),
+    ]
+
+    resource = models.CharField(
+        max_length=50, 
+        choices=RESOURCE_CHOICES,
+        help_text='Recurso sobre o qual a permissão se aplica'
+    )
+    action = models.CharField(
+        max_length=20, 
+        choices=ACTION_CHOICES,
+        help_text='Ação permitida sobre o recurso'
+    )
+    description = models.CharField(
+        max_length=200,
+        help_text='Descrição clara da permissão'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Permissão'
+        verbose_name_plural = 'Permissões'
+        unique_together = ['resource', 'action']
+        ordering = ['resource', 'action']
+
+    def __str__(self):
+        return f"{self.get_resource_display()} - {self.get_action_display()}"
+
+    @property
+    def codename(self):
+        """Retorna um código único para a permissão"""
+        return f"{self.action}_{self.resource}"
+
+
+class RolePermission(models.Model):
+    """
+    Modelo de associação entre Roles e Permissions
+    """
+    role = models.ForeignKey(
+        Role, 
+        on_delete=models.CASCADE,
+        related_name='permissions'
+    )
+    permission = models.ForeignKey(
+        Permission, 
+        on_delete=models.CASCADE,
+        related_name='roles'
+    )
+    granted_at = models.DateTimeField(auto_now_add=True)
+    granted_by = models.ForeignKey(
+        Usuario, 
+        on_delete=models.SET_NULL,
+        null=True, 
+        blank=True,
+        help_text='Usuário que concedeu esta permissão'
+    )
+
+    class Meta:
+        verbose_name = 'Permissão do Role'
+        verbose_name_plural = 'Permissões dos Roles'
+        unique_together = ['role', 'permission']
+
+    def __str__(self):
+        return f"{self.role.name} - {self.permission}"
+
+
+class UserRole(models.Model):
+    """
+    Modelo de associação entre Usuários e Roles
+    """
+    user = models.ForeignKey(
+        Usuario, 
+        on_delete=models.CASCADE,
+        related_name='user_roles'
+    )
+    role = models.ForeignKey(
+        Role, 
+        on_delete=models.CASCADE,
+        related_name='user_assignments'
+    )
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    assigned_by = models.ForeignKey(
+        Usuario, 
+        on_delete=models.SET_NULL,
+        null=True, 
+        blank=True,
+        related_name='role_assignments_made',
+        help_text='Usuário que atribuiu este role'
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text='Se esta atribuição está ativa'
+    )
+
+    class Meta:
+        verbose_name = 'Role do Usuário'
+        verbose_name_plural = 'Roles dos Usuários'
+        unique_together = ['user', 'role']
+
+    def __str__(self):
+        return f"{self.user.nome} - {self.role.display_name}"
