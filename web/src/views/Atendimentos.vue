@@ -214,8 +214,8 @@
                 <td>{{ formatarHora(atendimento.data_hora) }}</td>
                 <td>
                   <div class="pet-info">
-                    <span class="pet-name">{{ atendimento.animal_nome || atendimento.animal }}</span>
-                    <span class="pet-species">{{ getPetSpecies(atendimento.animal_nome || atendimento.animal) }}</span>
+                    <span class="pet-name">{{ atendimento.pet_nome }}</span>
+                    <span class="pet-species">{{ getPetSpecies(atendimento.pet_especie) }}</span>
                   </div>
                 </td>
                 <td>{{ atendimento.servico_nome || atendimento.servico }}</td>

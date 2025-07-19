@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import authService from '../../services/authService.js'
+import adminService from '../../services/adminService.js'
 
 const servicos = ref([])
 const loading = ref(false)
@@ -32,7 +32,7 @@ const loadServicos = async () => {
     loading.value = true
     error.value = null
     
-    const data = await authService.getServicos()
+    const data = await adminService.getServicos()
     servicos.value = Array.isArray(data) ? data : []
     
   } catch (err) {
@@ -62,7 +62,7 @@ const adicionarServico = async () => {
       especialidades: novoServico.value.especialidades.join(',') || ''
     }
 
-    await authService.createServico(servicoData)
+    await adminService.createServico(servicoData)
     
     // Recarregar lista
     await loadServicos()
@@ -91,7 +91,7 @@ const removerServico = async (id) => {
   }
 
   try {
-    await authService.deleteServico(id)
+    await adminService.deleteServico(id)
     await loadServicos()
   } catch (err) {
     console.error('Erro ao remover serviço:', err)

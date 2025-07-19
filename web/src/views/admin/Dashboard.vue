@@ -1,7 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import CalendarioSemanalAdmin from '../../components/CalendarioSemanalAdmin.vue'
-import authService from '../../services/authService.js'
 import adminService from '../../services/adminService.js'
 
 // Dados do dashboard
@@ -82,7 +81,7 @@ const carregarDados = async () => {
 
 const confirmarAgendamento = async (agendamentoId) => {
   try {
-    await authService.confirmarAgendamento(agendamentoId)
+    await adminService.confirmarAgendamento(agendamentoId)
     // Recarregar dados após confirmação
     await carregarDados()
   } catch (error) {
@@ -92,7 +91,7 @@ const confirmarAgendamento = async (agendamentoId) => {
 
 const cancelarAgendamento = async (agendamentoId) => {
   try {
-    await authService.cancelarAgendamento(agendamentoId)
+    await adminService.cancelarAgendamento(agendamentoId)
     // Recarregar dados após cancelamento
     await carregarDados()
   } catch (error) {
@@ -266,6 +265,7 @@ onMounted(() => {
                 </span>
               </button>
               <button 
+                v-if="agendamento.status !== 'cancelado'"
                 @click="cancelarAgendamento(agendamento.id)"
                 class="button is-small is-danger"
                 title="Cancelar"

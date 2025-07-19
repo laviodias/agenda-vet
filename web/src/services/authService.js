@@ -130,46 +130,6 @@ class AuthService {
     }
   }
 
-  // Dashboard Stats
-  async getDashboardStats() {
-    try {
-      return await apiService.get('/agendamentos/dashboard/')
-    } catch (error) {
-      console.error('Erro ao buscar estatísticas do dashboard:', error)
-      throw error
-    }
-  }
-
-  // Agendamentos Recentes
-  async getAgendamentosRecentes() {
-    try {
-      return await apiService.get('/agendamentos/recentes/')
-    } catch (error) {
-      console.error('Erro ao buscar agendamentos recentes:', error)
-      throw error
-    }
-  }
-
-  // Todos os Agendamentos (admin)
-  async getAllAgendamentos() {
-    try {
-      return await apiService.get('/agendamentos/listar/')
-    } catch (error) {
-      console.error('Erro ao buscar todos os agendamentos:', error)
-      throw error
-    }
-  }
-
-  // Confirmar Agendamento
-  async confirmarAgendamento(agendamentoId) {
-    try {
-      return await apiService.patch(`/agendamentos/${agendamentoId}/confirmar/`)
-    } catch (error) {
-      console.error('Erro ao confirmar agendamento:', error)
-      throw error
-    }
-  }
-
   // Buscar profissionais (mantido para compatibilidade, mas retorna lista vazia)
   async getProfissionais() {
     try {
@@ -206,36 +166,6 @@ class AuthService {
       return await apiService.patch(`/agendamentos/${agendamentoId}/cancelar/`)
     } catch (error) {
       console.error('Erro ao cancelar agendamento:', error)
-      throw error
-    }
-  }
-
-  // Deletar usuário
-  async deleteUser(userId) {
-    try {
-      return await apiService.delete(`/usuarios/${userId}/deletar/`)
-    } catch (error) {
-      console.error('Erro ao deletar usuário:', error)
-      throw error
-    }
-  }
-
-  // Criar serviço
-  async createServico(servicoData) {
-    try {
-      return await apiService.post('/admin/servicos/create/', servicoData)
-    } catch (error) {
-      console.error('Erro ao criar serviço:', error)
-      throw error
-    }
-  }
-
-  // Deletar serviço
-  async deleteServico(servicoId) {
-    try {
-      return await apiService.delete(`/servicos/${servicoId}/deletar/`)
-    } catch (error) {
-      console.error('Erro ao deletar serviço:', error)
       throw error
     }
   }

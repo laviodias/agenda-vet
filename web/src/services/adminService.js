@@ -533,6 +533,40 @@ class AdminService {
       throw error
     }
   }
+
+  // ===== USUÁRIOS =====
+  
+  // Deletar usuário
+  async deleteUser(userId) {
+    try {
+      return await apiService.delete(`/usuarios/${userId}/deletar/`)
+    } catch (error) {
+      console.error('Erro ao deletar usuário:', error)
+      throw error
+    }
+  }
+
+  // ===== SERVIÇOS ADMIN =====
+  
+  // Criar serviço (admin)
+  async createServico(servicoData) {
+    try {
+      return await apiService.post('/admin/servicos/create/', servicoData)
+    } catch (error) {
+      console.error('Erro ao criar serviço:', error)
+      throw error
+    }
+  }
+
+  // Deletar serviço (admin)
+  async deleteServico(servicoId) {
+    try {
+      return await apiService.delete(`/servicos/${servicoId}/deletar/`)
+    } catch (error) {
+      console.error('Erro ao deletar serviço:', error)
+      throw error
+    }
+  }
 }
 
 export default new AdminService() 

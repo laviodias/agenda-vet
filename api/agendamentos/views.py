@@ -87,21 +87,8 @@ def listar_todos_agendamentos(request):
             'servico', 'animal', 'cliente'
         ).order_by('-data_hora')
         
-        data = []
-        for agendamento in agendamentos:
-            data.append({
-                'id': agendamento.id,
-                'data_hora': agendamento.data_hora.isoformat(),
-                'servico': agendamento.servico.nome,
-                'preco': float(agendamento.servico.preco),
-                'pet_nome': agendamento.animal.nome,
-                'pet_especie': agendamento.animal.especie,
-                'cliente': agendamento.cliente.nome,
-                'observacoes': agendamento.observacoes or '',
-                'status': agendamento.status
-            })
-        
-        return Response(data)
+        serializer = AgendamentoSerializer(agendamentos, many=True)
+        return Response(serializer.data)
     except Exception as e:
         return Response({
             'error': 'Erro ao buscar agendamentos',
@@ -119,21 +106,8 @@ def agendamentos_recentes(request):
             'servico', 'animal', 'cliente'
         ).order_by('-data_hora')[:10]
         
-        data = []
-        for agendamento in agendamentos:
-            data.append({
-                'id': agendamento.id,
-                'data_hora': agendamento.data_hora.isoformat(),
-                'servico': agendamento.servico.nome,
-                'preco': float(agendamento.servico.preco),
-                'pet_nome': agendamento.animal.nome,
-                'pet_especie': agendamento.animal.especie,
-                'cliente': agendamento.cliente.nome,
-                'observacoes': agendamento.observacoes or '',
-                'status': agendamento.status
-            })
-        
-        return Response(data)
+        serializer = AgendamentoSerializer(agendamentos, many=True)
+        return Response(serializer.data)
         
     except Exception as e:
         return Response({
@@ -184,8 +158,14 @@ def confirmar_agendamento(request, agendamento_id):
     """
     try:
         agendamento = Agendamento.objects.get(id=agendamento_id)
-        # Aqui você pode adicionar lógica adicional para confirmação
-        return Response({'message': 'Agendamento confirmado com sucesso'})
+        
+        # Atualizar status para confirmado
+        agendamento.status = 'confirmado'
+        agendamento.save()
+        
+        # Retornar dados do agendamento usando o serializer
+        serializer = AgendamentoSerializer(agendamento)
+        return Response(serializer.data)
     except Agendamento.DoesNotExist:
         return Response({
             'error': 'Agendamento não encontrado'
@@ -215,7 +195,9 @@ def cancelar_agendamento(request, agendamento_id):
         agendamento.status = 'cancelado'
         agendamento.save()
         
-        return Response({'message': 'Agendamento cancelado com sucesso'})
+        # Retornar dados do agendamento usando o serializer
+        serializer = AgendamentoSerializer(agendamento)
+        return Response(serializer.data)
     except Agendamento.DoesNotExist:
         return Response({
             'error': 'Agendamento não encontrado'
