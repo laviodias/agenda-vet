@@ -221,17 +221,15 @@ onMounted(async () => {
 }
 
 .calendar-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
+  background: var(--background-color);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .calendar-container {
-  max-height: 400px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
   overflow: hidden;
-  border: 1px solid #dbdbdb;
-  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .calendar-grid {
@@ -240,8 +238,8 @@ onMounted(async () => {
 }
 
 .calendar-body {
-  overflow-y: auto;
-  max-height: 300px;
+  background: var(--background-color);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .calendar-row {
@@ -307,10 +305,11 @@ onMounted(async () => {
   padding: 0.75rem 0.5rem;
   border: 1px solid #dbdbdb;
   border-radius: 4px;
-  background-color: #fafafa;
+  background-color: var(--background-color);
   cursor: pointer;
   transition: all 0.2s;
   font-size: 0.9rem;
+  border-right: 1px solid var(--border-color);
 }
 
 .time-slot:hover {
@@ -347,5 +346,38 @@ onMounted(async () => {
 
 .calendar-body::-webkit-scrollbar-thumb:hover {
   background: #555;
+}
+
+.appointment {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: white;
+}
+
+.appointment:hover {
+  background-color: var(--primary-color);
+  filter: brightness(0.9);
+}
+
+.appointment.disabled {
+  background-color: var(--background-color);
+  color: var(--text-color);
+  opacity: 0.5;
+}
+
+.appointment.empty {
+  border: 1px dashed var(--border-color);
+}
+
+.appointment.loading {
+  background: var(--background-color);
+}
+
+.appointment.loading::after {
+  background: var(--text-color);
+}
+
+.appointment.loading::before {
+  background: var(--text-color);
 }
 </style> 

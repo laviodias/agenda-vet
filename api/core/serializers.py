@@ -44,6 +44,41 @@ class ConfiguracaoBrandSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Cor deve estar no formato hexadecimal (#RRGGBB)')
         return value
     
+    def validate_cor_success(self, value):
+        if not value.startswith('#') or len(value) != 7:
+            raise serializers.ValidationError('Cor deve estar no formato hexadecimal (#RRGGBB)')
+        return value
+    
+    def validate_cor_danger(self, value):
+        if not value.startswith('#') or len(value) != 7:
+            raise serializers.ValidationError('Cor deve estar no formato hexadecimal (#RRGGBB)')
+        return value
+    
+    def validate_cor_warning(self, value):
+        if not value.startswith('#') or len(value) != 7:
+            raise serializers.ValidationError('Cor deve estar no formato hexadecimal (#RRGGBB)')
+        return value
+    
+    def validate_cor_info(self, value):
+        if not value.startswith('#') or len(value) != 7:
+            raise serializers.ValidationError('Cor deve estar no formato hexadecimal (#RRGGBB)')
+        return value
+    
+    def validate_cor_texto(self, value):
+        if not value.startswith('#') or len(value) != 7:
+            raise serializers.ValidationError('Cor deve estar no formato hexadecimal (#RRGGBB)')
+        return value
+    
+    def validate_cor_borda(self, value):
+        if not value.startswith('#') or len(value) != 7:
+            raise serializers.ValidationError('Cor deve estar no formato hexadecimal (#RRGGBB)')
+        return value
+    
+    def validate_cor_sombra(self, value):
+        if not value.startswith('#') or len(value) != 7:
+            raise serializers.ValidationError('Cor deve estar no formato hexadecimal (#RRGGBB)')
+        return value
+    
     def validate_logo(self, value):
         if value:
             # Validar tamanho do arquivo (máx 2MB)

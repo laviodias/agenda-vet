@@ -78,7 +78,7 @@
           <div v-for="animal in filteredAnimais" :key="animal.id" class="animal-card">
             <div class="animal-header">
               <h3>{{ animal.nome }}</h3>
-              <span class="status-badge active">
+              <span class="status-badge ativo">
                 Ativo
               </span>
             </div>
@@ -619,14 +619,19 @@ export default {
   font-weight: bold;
 }
 
-.status-badge.active {
-  background: #d4edda;
-  color: #155724;
+.status-badge.ativo {
+  background: var(--success-color);
+  color: white;
 }
 
-.status-badge.inactive {
-  background: #f8d7da;
-  color: #721c24;
+.status-badge.inativo {
+  color: var(--warning-color);
+  border: 1px solid var(--warning-color);
+}
+
+.status-badge.ativo {
+  color: var(--success-color);
+  border: 1px solid var(--success-color);
 }
 
 .animal-info {

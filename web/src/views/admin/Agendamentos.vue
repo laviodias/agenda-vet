@@ -840,18 +840,18 @@ export default {
 }
 
 .status-badge.confirmado {
-  background: #d4edda;
-  color: #155724;
+  background: var(--success-color);
+  color: white;
 }
 
 .status-badge.pendente {
-  background: #fff3cd;
-  color: #856404;
+  color: var(--warning-color);
+  border: 1px solid var(--warning-color);
 }
 
 .status-badge.cancelado {
-  background: #f8d7da;
-  color: #721c24;
+  color: var(--danger-color);
+  border: 1px solid var(--danger-color);
 }
 
 .status-badge.realizado {

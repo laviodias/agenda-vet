@@ -29,7 +29,7 @@ class ConfiguracaoBrand(models.Model):
         help_text='Logo do estabelecimento (formato PNG ou JPG recomendado)'
     )
     
-    # Paleta de cores
+    # Paleta de cores principal
     cor_primaria = models.CharField(
         max_length=7, 
         default='#00d1b2',
@@ -52,6 +52,50 @@ class ConfiguracaoBrand(models.Model):
         max_length=7, 
         default='#f5f5f5',
         help_text='Cor de fundo em formato hexadecimal (ex: #f5f5f5)'
+    )
+    
+    # Cores de status e feedback
+    cor_success = models.CharField(
+        max_length=7, 
+        default='#48c774',
+        help_text='Cor de sucesso/confirmação em formato hexadecimal (ex: #48c774)'
+    )
+    
+    cor_danger = models.CharField(
+        max_length=7, 
+        default='#f14668',
+        help_text='Cor de erro/negação em formato hexadecimal (ex: #f14668)'
+    )
+    
+    cor_warning = models.CharField(
+        max_length=7, 
+        default='#ffdd57',
+        help_text='Cor de aviso em formato hexadecimal (ex: #ffdd57)'
+    )
+    
+    cor_info = models.CharField(
+        max_length=7, 
+        default='#3298dc',
+        help_text='Cor de informação em formato hexadecimal (ex: #3298dc)'
+    )
+    
+    # Cores de interface
+    cor_texto = models.CharField(
+        max_length=7, 
+        default='#363636',
+        help_text='Cor principal do texto em formato hexadecimal (ex: #363636)'
+    )
+    
+    cor_borda = models.CharField(
+        max_length=7, 
+        default='#dbdbdb',
+        help_text='Cor das bordas em formato hexadecimal (ex: #dbdbdb)'
+    )
+    
+    cor_sombra = models.CharField(
+        max_length=7, 
+        default='#000000',
+        help_text='Cor das sombras em formato hexadecimal (ex: #000000)'
     )
     
     # Informações adicionais

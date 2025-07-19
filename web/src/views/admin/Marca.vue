@@ -15,6 +15,13 @@ const formData = ref({
   cor_secundaria: '#363636',
   cor_accent: '#3273dc',
   cor_background: '#f5f5f5',
+  cor_success: '#48c774',
+  cor_danger: '#f14668',
+  cor_warning: '#ffdd57',
+  cor_info: '#3298dc',
+  cor_texto: '#363636',
+  cor_borda: '#dbdbdb',
+  cor_sombra: '#000000',
   endereco: '',
   telefone: '',
   email: '',
@@ -31,7 +38,14 @@ const isFormValid = computed(() => {
          brandService.validarCorHex(formData.value.cor_primaria) &&
          brandService.validarCorHex(formData.value.cor_secundaria) &&
          brandService.validarCorHex(formData.value.cor_accent) &&
-         brandService.validarCorHex(formData.value.cor_background)
+         brandService.validarCorHex(formData.value.cor_background) &&
+         brandService.validarCorHex(formData.value.cor_success) &&
+         brandService.validarCorHex(formData.value.cor_danger) &&
+         brandService.validarCorHex(formData.value.cor_warning) &&
+         brandService.validarCorHex(formData.value.cor_info) &&
+         brandService.validarCorHex(formData.value.cor_texto) &&
+         brandService.validarCorHex(formData.value.cor_borda) &&
+         brandService.validarCorHex(formData.value.cor_sombra)
 })
 
 // Carregar dados
@@ -61,6 +75,13 @@ const novaConfiguracao = () => {
     cor_secundaria: '#363636',
     cor_accent: '#3273dc',
     cor_background: '#f5f5f5',
+    cor_success: '#48c774',
+    cor_danger: '#f14668',
+    cor_warning: '#ffdd57',
+    cor_info: '#3298dc',
+    cor_texto: '#363636',
+    cor_borda: '#dbdbdb',
+    cor_sombra: '#000000',
     endereco: '',
     telefone: '',
     email: '',
@@ -90,7 +111,25 @@ const editarConfiguracao = (config) => {
 const formDataChanged = () => {
   if (!editando.value || !originalData.value) return true // Novo registro sempre salva
   
-  const fieldsToCompare = ['nome_estabelecimento', 'cor_primaria', 'cor_secundaria', 'cor_accent', 'cor_background', 'endereco', 'telefone', 'email', 'website', 'ativo']
+  const fieldsToCompare = [
+    'nome_estabelecimento', 
+    'cor_primaria', 
+    'cor_secundaria', 
+    'cor_accent', 
+    'cor_background',
+    'cor_success',
+    'cor_danger',
+    'cor_warning',
+    'cor_info',
+    'cor_texto',
+    'cor_borda',
+    'cor_sombra',
+    'endereco', 
+    'telefone', 
+    'email', 
+    'website', 
+    'ativo'
+  ]
   
   return fieldsToCompare.some(field => {
     return formData.value[field] !== originalData.value[field]
@@ -251,6 +290,10 @@ const previewCores = () => {
   root.style.setProperty('--preview-secondary', formData.value.cor_secundaria)
   root.style.setProperty('--preview-accent', formData.value.cor_accent)
   root.style.setProperty('--preview-background', formData.value.cor_background)
+  root.style.setProperty('--preview-success', formData.value.cor_success)
+  root.style.setProperty('--preview-danger', formData.value.cor_danger)
+  root.style.setProperty('--preview-warning', formData.value.cor_warning)
+  root.style.setProperty('--preview-info', formData.value.cor_info)
 }
 
 onMounted(() => {
@@ -327,6 +370,37 @@ onMounted(() => {
                   :style="{ backgroundColor: configuracaoAtiva.cor_background }"
                 ></div>
                 <span>Fundo</span>
+              </div>
+            </div>
+            
+            <div class="color-palette mt-3">
+              <div class="color-item">
+                <div 
+                  class="color-swatch" 
+                  :style="{ backgroundColor: configuracaoAtiva.cor_success }"
+                ></div>
+                <span>Sucesso</span>
+              </div>
+              <div class="color-item">
+                <div 
+                  class="color-swatch" 
+                  :style="{ backgroundColor: configuracaoAtiva.cor_danger }"
+                ></div>
+                <span>Erro</span>
+              </div>
+              <div class="color-item">
+                <div 
+                  class="color-swatch" 
+                  :style="{ backgroundColor: configuracaoAtiva.cor_warning }"
+                ></div>
+                <span>Aviso</span>
+              </div>
+              <div class="color-item">
+                <div 
+                  class="color-swatch" 
+                  :style="{ backgroundColor: configuracaoAtiva.cor_info }"
+                ></div>
+                <span>Info</span>
               </div>
             </div>
           </div>
@@ -586,6 +660,187 @@ onMounted(() => {
                     >
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cores de Status e Feedback -->
+          <div class="field">
+            <label class="label">Cores de Status e Feedback</label>
+            <div class="columns">
+              <div class="column">
+                <label class="label is-small">Cor de Sucesso *</label>
+                <div class="field has-addons">
+                  <div class="control">
+                    <input 
+                      class="input" 
+                      type="color" 
+                      v-model="formData.cor_success"
+                      @input="previewCores"
+                    >
+                  </div>
+                  <div class="control is-expanded">
+                    <input 
+                      class="input" 
+                      type="text" 
+                      v-model="formData.cor_success"
+                      placeholder="#48c774"
+                      @input="previewCores"
+                    >
+                  </div>
+                </div>
+              </div>
+              
+              <div class="column">
+                <label class="label is-small">Cor de Erro *</label>
+                <div class="field has-addons">
+                  <div class="control">
+                    <input 
+                      class="input" 
+                      type="color" 
+                      v-model="formData.cor_danger"
+                      @input="previewCores"
+                    >
+                  </div>
+                  <div class="control is-expanded">
+                    <input 
+                      class="input" 
+                      type="text" 
+                      v-model="formData.cor_danger"
+                      placeholder="#f14668"
+                      @input="previewCores"
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="columns">
+              <div class="column">
+                <label class="label is-small">Cor de Aviso *</label>
+                <div class="field has-addons">
+                  <div class="control">
+                    <input 
+                      class="input" 
+                      type="color" 
+                      v-model="formData.cor_warning"
+                      @input="previewCores"
+                    >
+                  </div>
+                  <div class="control is-expanded">
+                    <input 
+                      class="input" 
+                      type="text" 
+                      v-model="formData.cor_warning"
+                      placeholder="#ffdd57"
+                      @input="previewCores"
+                    >
+                  </div>
+                </div>
+              </div>
+              
+              <div class="column">
+                <label class="label is-small">Cor de Informação *</label>
+                <div class="field has-addons">
+                  <div class="control">
+                    <input 
+                      class="input" 
+                      type="color" 
+                      v-model="formData.cor_info"
+                      @input="previewCores"
+                    >
+                  </div>
+                  <div class="control is-expanded">
+                    <input 
+                      class="input" 
+                      type="text" 
+                      v-model="formData.cor_info"
+                      placeholder="#3298dc"
+                      @input="previewCores"
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cores de Interface -->
+          <div class="field">
+            <label class="label">Cores de Interface</label>
+            <div class="columns">
+              <div class="column">
+                <label class="label is-small">Cor do Texto *</label>
+                <div class="field has-addons">
+                  <div class="control">
+                    <input 
+                      class="input" 
+                      type="color" 
+                      v-model="formData.cor_texto"
+                      @input="previewCores"
+                    >
+                  </div>
+                  <div class="control is-expanded">
+                    <input 
+                      class="input" 
+                      type="text" 
+                      v-model="formData.cor_texto"
+                      placeholder="#363636"
+                      @input="previewCores"
+                    >
+                  </div>
+                </div>
+              </div>
+              
+              <div class="column">
+                <label class="label is-small">Cor das Bordas *</label>
+                <div class="field has-addons">
+                  <div class="control">
+                    <input 
+                      class="input" 
+                      type="color" 
+                      v-model="formData.cor_borda"
+                      @input="previewCores"
+                    >
+                  </div>
+                  <div class="control is-expanded">
+                    <input 
+                      class="input" 
+                      type="text" 
+                      v-model="formData.cor_borda"
+                      placeholder="#dbdbdb"
+                      @input="previewCores"
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="columns">
+              <div class="column">
+                <label class="label is-small">Cor das Sombras *</label>
+                <div class="field has-addons">
+                  <div class="control">
+                    <input 
+                      class="input" 
+                      type="color" 
+                      v-model="formData.cor_sombra"
+                      @input="previewCores"
+                    >
+                  </div>
+                  <div class="control is-expanded">
+                    <input 
+                      class="input" 
+                      type="text" 
+                      v-model="formData.cor_sombra"
+                      placeholder="#000000"
+                      @input="previewCores"
+                    >
+                  </div>
+                </div>
+              </div>
+              
+              <div class="column">
+                <!-- Espaço vazio para manter layout -->
               </div>
             </div>
           </div>

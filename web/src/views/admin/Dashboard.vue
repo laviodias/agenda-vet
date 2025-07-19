@@ -457,17 +457,17 @@ onMounted(() => {
 }
 
 .status-badge.confirmado {
-  background-color: #48c774;
+  background-color: var(--success-color);
   color: white;
 }
 
 .status-badge.pendente {
-  background-color: #ffdd57;
+  background-color: var(--warning-color);
   color: #333;
 }
 
 .status-badge.cancelado {
-  background-color: #f14668;
+  background-color: var(--danger-color);
   color: white;
 }
 

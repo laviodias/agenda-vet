@@ -431,19 +431,19 @@ const formatPhone = (value) => {
 
 <style scoped>
 .register-container {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #2E7D32 0%, #A5D6A7 100%);
-  padding: 1rem;
+  padding: 2rem;
 }
 
 .register-card {
   background: white;
   border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-  padding: 2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  padding: 2.5rem;
   width: 100%;
   max-width: 500px;
 }
@@ -453,155 +453,114 @@ const formatPhone = (value) => {
   margin-bottom: 2rem;
 }
 
-.logo {
-  font-size: 3rem;
-  color: #2E7D32;
-  margin-bottom: 1rem;
-}
-
-.title {
-  color: #2E7D32;
+.register-title {
+  color: var(--primary-color);
+  font-size: 2rem;
+  font-weight: bold;
   margin-bottom: 0.5rem;
 }
 
-.subtitle {
-  color: #666;
-  font-size: 1rem;
-  margin-bottom: 1.5rem;
+.register-subtitle {
+  color: var(--text-color);
+  opacity: 0.7;
 }
 
-.steps {
+.step-indicator {
   display: flex;
-  align-items: center;
   justify-content: center;
   margin-bottom: 2rem;
 }
 
 .step {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.step-number {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: #e9ecef;
-  color: #666;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: bold;
-  transition: all 0.3s;
+  margin: 0 0.5rem;
+  transition: all 0.3s ease;
 }
 
-.step.is-active .step-number {
-  background: #2E7D32;
+.step.active {
+  background: var(--primary-color);
   color: white;
 }
 
-.step.is-completed .step-number {
-  background: #A5D6A7;
-  color: #2E7D32;
+.step.completed {
+  background: var(--success-color);
+  color: white;
 }
 
-.step-label {
-  font-size: 0.875rem;
-  color: #666;
-  font-weight: 600;
+.step.pending {
+  background: var(--border-color);
+  color: var(--text-color);
 }
 
-.step.is-active .step-label {
-  color: #2E7D32;
-}
-
-.step-line {
-  width: 60px;
-  height: 2px;
-  background: #e9ecef;
-  margin: 0 1rem;
-}
-
-.register-form {
+.form-group {
   margin-bottom: 1.5rem;
 }
 
-.field {
-  margin-bottom: 1.5rem;
-}
-
-.label {
-  color: #333;
+.form-label {
+  color: var(--text-color);
   font-weight: 600;
   margin-bottom: 0.5rem;
+  display: block;
 }
 
-.input, .select select, .textarea {
-  border-radius: 8px;
-  border: 2px solid #e9ecef;
-  transition: border-color 0.2s;
+.form-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
 }
 
-.input:focus, .select select:focus, .textarea:focus {
-  border-color: #2E7D32;
-  box-shadow: 0 0 0 0.125em rgba(46, 125, 50, 0.25);
+.form-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.form-input::placeholder {
+  color: var(--text-color);
+  opacity: 0.5;
 }
 
 .password-toggle {
+  color: var(--text-color);
   cursor: pointer;
-  color: #666;
-  transition: color 0.2s;
+  transition: color 0.3s ease;
 }
 
 .password-toggle:hover {
-  color: #2E7D32;
+  color: var(--primary-color);
 }
 
-.notification {
-  border-radius: 8px;
-  padding: 0.75rem;
-  margin-bottom: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+.register-footer {
+  border-top: 1px solid var(--border-color);
+  padding-top: 1.5rem;
+  margin-top: 2rem;
+  text-align: center;
 }
 
-.button {
-  border-radius: 8px;
+.register-footer-text {
+  color: var(--text-color);
+  opacity: 0.7;
+}
+
+.register-footer-link {
+  color: var(--primary-color);
+  text-decoration: none;
   font-weight: 600;
-  height: 3rem;
-  transition: all 0.2s;
 }
 
-.button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+.register-footer-link:hover {
+  text-decoration: underline;
 }
 
-@media (max-width: 480px) {
-  .register-card {
-    padding: 1.5rem;
-  }
-  
-  .logo {
-    font-size: 2.5rem;
-  }
-  
-  .title {
-    font-size: 1.5rem;
-  }
-  
-  .steps {
-    flex-direction: column;
-    gap: 1rem;
-  }
-  
-  .step-line {
-    width: 2px;
-    height: 30px;
-    margin: 0;
-  }
+.register-background {
+  background: var(--background-color);
 }
 </style> 

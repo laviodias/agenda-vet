@@ -650,16 +650,52 @@ const calcularIdade = (dataNascimento) => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
+.table-container {
+  background: var(--background-color);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.table {
+  background: white;
+}
+
+.table thead th {
+  background: var(--background-color);
+  color: var(--text-color);
+  font-weight: 600;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.table tbody tr:hover {
+  background-color: var(--background-color);
+}
+
 .pet-avatar {
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background: #e3f2fd;
+  background: var(--info-color);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #1976d2;
+  color: white;
   font-size: 1.25rem;
+}
+
+.pet-info {
+  color: var(--text-color);
+}
+
+.pet-link {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.pet-link:hover {
+  text-decoration: underline;
 }
 
 .card-footer-item {
@@ -692,16 +728,21 @@ const calcularIdade = (dataNascimento) => {
 }
 
 .modal-card {
-  max-width: 600px;
+  max-width: 800px;
   width: 95%;
   border-radius: 8px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
 
+.modal-card-body {
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
 .modal-card-foot {
   padding: 1rem 1.5rem;
-  background: #f8f9fa;
-  border-top: 1px solid #e9ecef;
+  background: var(--background-color);
+  border-top: 1px solid var(--border-color);
 }
 
 .modal-card-foot .button {
@@ -714,65 +755,65 @@ const calcularIdade = (dataNascimento) => {
 
 /* Melhorias nos botões */
 .button.is-primary {
-  background-color: #007bff;
-  border-color: #007bff;
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
 }
 
 .button.is-primary:hover {
-  background-color: #0056b3;
-  border-color: #0056b3;
+  background-color: var(--primary-color);
+  filter: brightness(0.9);
 }
 
 .button.is-info {
-  background-color: #17a2b8;
-  border-color: #17a2b8;
+  background-color: var(--info-color);
+  border-color: var(--info-color);
 }
 
 .button.is-info:hover {
-  background-color: #138496;
-  border-color: #117a8b;
+  background-color: var(--info-color);
+  filter: brightness(0.9);
 }
 
 .button.is-success {
-  background-color: #28a745;
-  border-color: #28a745;
+  background-color: var(--success-color);
+  border-color: var(--success-color);
 }
 
 .button.is-success:hover {
-  background-color: #218838;
-  border-color: #1e7e34;
+  background-color: var(--success-color);
+  filter: brightness(0.9);
 }
 
 .button.is-danger {
-  background-color: #dc3545;
-  border-color: #dc3545;
+  background-color: var(--danger-color);
+  border-color: var(--danger-color);
 }
 
 .button.is-danger:hover {
-  background-color: #c82333;
-  border-color: #bd2130;
+  background-color: var(--danger-color);
+  filter: brightness(0.9);
 }
 
 /* Melhorias nos campos de formulário */
 .input, .select select, .textarea {
-  border: 1px solid #ced4da;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
 }
 
 .input:focus, .select select:focus, .textarea:focus {
-  border-color: #007bff;
+  border-color: var(--primary-color);
   box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 }
 
 /* Melhorias nos labels */
 .label {
-  color: #495057;
+  color: var(--text-color);
   font-weight: 600;
 }
 
 /* Melhorias na navbar */
 .navbar.is-primary {
-  background-color: #007bff;
+  background-color: var(--primary-color);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -782,29 +823,29 @@ const calcularIdade = (dataNascimento) => {
 
 .loading-state, .error-state {
   padding: 4rem 0;
-  background-color: #f8f9fa;
+  background-color: var(--background-color);
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .loading-state .icon, .error-state .icon {
-  color: #e9ecef;
+  color: var(--border-color);
   font-size: 4rem;
 }
 
 .loading-state p, .error-state p {
-  color: #6c757d;
+  color: var(--text-color);
   font-size: 1.1rem;
 }
 
 .loading-state .button, .error-state .button {
-  background-color: #007bff;
-  border-color: #007bff;
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
 }
 
 .loading-state .button:hover, .error-state .button:hover {
-  background-color: #0056b3;
-  border-color: #0056b3;
+  background-color: var(--primary-color);
+  filter: brightness(0.9);
 }
 
 @media (max-width: 768px) {

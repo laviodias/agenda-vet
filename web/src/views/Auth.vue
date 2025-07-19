@@ -27,7 +27,11 @@ const toggleForm = () => {
 
 <style scoped>
 .auth-container {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
   min-height: 100vh;
-  background: linear-gradient(135deg, var(--primary-color, #2E7D32) 0%, var(--accent-color, #A5D6A7) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
 }
 </style> 

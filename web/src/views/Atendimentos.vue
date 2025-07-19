@@ -744,19 +744,21 @@ const getPeriodLabel = (dataHora) => {
 }
 
 .view-btn .icon {
-  color: #17a2b8;
+  color: var(--info-color);
 }
 
 .view-btn:hover .icon {
-  color: #138496;
+  color: var(--info-color);
+  filter: brightness(0.9);
 }
 
 .cancel-btn .icon {
-  color: #dc3545;
+  color: var(--danger-color);
 }
 
 .cancel-btn:hover .icon {
-  color: #c82333;
+  color: var(--danger-color);
+  filter: brightness(0.9);
 }
 
 .buttons.are-small .action-btn {

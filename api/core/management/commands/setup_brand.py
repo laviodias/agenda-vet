@@ -42,6 +42,13 @@ class Command(BaseCommand):
             cor_secundaria=options['cor_secundaria'],
             cor_accent='#3273dc',
             cor_background='#f5f5f5',
+            cor_success='#48c774',
+            cor_danger='#f14668',
+            cor_warning='#ffdd57',
+            cor_info='#3298dc',
+            cor_texto='#363636',
+            cor_borda='#dbdbdb',
+            cor_sombra='#000000',
             ativo=True
         )
 

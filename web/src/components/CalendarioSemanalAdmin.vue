@@ -211,8 +211,8 @@ const isWeekend = (date) => {
   justify-content: space-between;
   align-items: center;
   padding: 1rem;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e9ecef;
+  background: var(--background-color);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .calendar-navigation {
@@ -233,14 +233,14 @@ const isWeekend = (date) => {
 .calendar-days-header {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  background: #f8f9fa;
-  border-bottom: 1px solid #e9ecef;
+  background: var(--background-color);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .calendar-day-header {
   padding: 0.75rem;
   text-align: center;
-  border-right: 1px solid #e9ecef;
+  border-right: 1px solid var(--border-color);
   transition: background-color 0.2s;
 }
 
@@ -249,14 +249,14 @@ const isWeekend = (date) => {
 }
 
 .calendar-day-header.is-today {
-  background: #e3f2fd;
-  color: #1976d2;
+  background: var(--info-color);
+  color: white;
   font-weight: bold;
 }
 
 .calendar-day-header.is-weekend {
-  background: #fff3e0;
-  color: #f57c00;
+  background: var(--warning-color);
+  color: #333;
 }
 
 .day-name {
@@ -278,7 +278,7 @@ const isWeekend = (date) => {
 
 .calendar-day-content {
   padding: 0.5rem;
-  border-right: 1px solid #e9ecef;
+  border-right: 1px solid var(--border-color);
   min-height: 400px;
   background: white;
   transition: background-color 0.2s;
@@ -289,32 +289,36 @@ const isWeekend = (date) => {
 }
 
 .calendar-day-content.is-today {
-  background: #f3f8ff;
+  background: var(--info-color);
+  opacity: 0.1;
 }
 
 .calendar-day-content.is-weekend {
-  background: #fffbf0;
+  background: var(--warning-color);
+  opacity: 0.1;
 }
 
 .appointment-card {
-  background: #e8f5e8;
-  border: 1px solid #c8e6c9;
+  background: var(--success-color);
+  border: 1px solid var(--success-color);
   border-radius: 6px;
   padding: 0.75rem;
   margin-bottom: 0.5rem;
   font-size: 0.875rem;
   transition: all 0.2s;
+  color: white;
 }
 
 .appointment-card:hover {
-  background: #c8e6c9;
+  background: var(--success-color);
+  filter: brightness(0.9);
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .appointment-time {
   font-weight: bold;
-  color: #2e7d32;
+  color: white;
   margin-bottom: 0.5rem;
   font-size: 1rem;
 }
@@ -326,7 +330,7 @@ const isWeekend = (date) => {
 }
 
 .appointment-service {
-  color: #1b5e20;
+  color: white;
   margin-bottom: 0.25rem;
 }
 
@@ -338,7 +342,7 @@ const isWeekend = (date) => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #424242;
+  color: white;
   font-size: 0.8rem;
 }
 
@@ -347,7 +351,8 @@ const isWeekend = (date) => {
 .appointment-owner i,
 .appointment-price i,
 .appointment-notes i {
-  color: #666;
+  color: white;
+  opacity: 0.8;
   width: 12px;
 }
 

@@ -290,15 +290,15 @@ onMounted(async () => {
 }
 
 .notification.is-danger {
-  background: #f8d7da;
-  color: #721c24;
-  border: 1px solid #f5c6cb;
+  background: var(--danger-color);
+  color: white;
+  border: 1px solid var(--danger-color);
 }
 
 .notification.is-info {
-  background: #d1ecf1;
-  color: #0c5460;
-  border: 1px solid #bee5eb;
+  background: var(--info-color);
+  color: white;
+  border: 1px solid var(--info-color);
 }
 
 .delete {

@@ -63,7 +63,7 @@
           <div v-for="role in filteredRoles" :key="role.id" class="role-card" :class="{ 'inactive': !role.is_active }">
             <div class="role-header">
               <h3>{{ role.display_name }}</h3>
-              <span :class="['status-badge', role.is_active ? 'active' : 'inactive']">
+              <span :class="['status-badge', role.is_active ? 'ativo' : 'inativo']">
                 {{ role.is_active ? 'Ativo' : 'Inativo' }}
               </span>
             </div>
@@ -930,14 +930,27 @@ export default {
   font-weight: bold;
 }
 
-.status-badge.active {
-  background: #d4edda;
-  color: #155724;
+.status-badge.ativo {
+  background: var(--success-color);
+  color: white;
 }
 
-.status-badge.inactive {
-  background: #f8d7da;
-  color: #721c24;
+.status-badge.inativo {
+  background: var(--info-color);
+  color: white;
+}
+
+.status-badge.pendente {
+  color: var(--warning-color);
+  border: 1px solid var(--warning-color);
+}
+
+.permission-item {
+  color: var(--success-color);
+}
+
+.role-header {
+  border-left: 4px solid var(--info-color);
 }
 
 .role-description {

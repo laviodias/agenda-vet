@@ -699,7 +699,7 @@ const handleAgendamentoCriado = async (novoAgendamento) => {
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #007bff, #0056b3);
+  background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -711,11 +711,11 @@ const handleAgendamentoCriado = async (novoAgendamento) => {
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background: #e3f2fd;
+  background: var(--info-color);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #1976d2;
+  color: white;
   font-size: 1.25rem;
 }
 
@@ -723,7 +723,7 @@ const handleAgendamentoCriado = async (novoAgendamento) => {
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   transition: transform 0.2s, box-shadow 0.2s;
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--border-color);
 }
 
 .card:hover {
@@ -734,16 +734,16 @@ const handleAgendamentoCriado = async (novoAgendamento) => {
 .card-footer-item {
   cursor: pointer;
   transition: background-color 0.2s;
-  color: #495057;
+  color: var(--text-color);
 }
 
 .card-footer-item:hover {
-  background-color: #f8f9fa;
-  color: #007bff;
+  background-color: var(--background-color);
+  color: var(--primary-color);
 }
 
 .card-footer-item:active {
-  background-color: #e9ecef;
+  background-color: var(--border-color);
 }
 
 .table-container {
@@ -751,7 +751,7 @@ const handleAgendamentoCriado = async (novoAgendamento) => {
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   overflow: hidden;
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--border-color);
 }
 
 .modal-card {
@@ -768,8 +768,8 @@ const handleAgendamentoCriado = async (novoAgendamento) => {
 
 .modal-card-foot {
   padding: 1rem 1.5rem;
-  background: #f8f9fa;
-  border-top: 1px solid #e9ecef;
+  background: var(--background-color);
+  border-top: 1px solid var(--border-color);
 }
 
 .modal-card-foot .button {
@@ -781,44 +781,44 @@ const handleAgendamentoCriado = async (novoAgendamento) => {
 }
 
 /* Melhorias nos botões */
-.button.is-info {
-  background-color: #17a2b8;
-  border-color: #17a2b8;
-}
-
-.button.is-info:hover {
-  background-color: #138496;
-  border-color: #117a8b;
-}
-
-.button.is-danger {
-  background-color: #dc3545;
-  border-color: #dc3545;
-}
-
-.button.is-danger:hover {
-  background-color: #c82333;
-  border-color: #bd2130;
-}
-
-.button.is-success {
-  background-color: #28a745;
-  border-color: #28a745;
-}
-
-.button.is-success:hover {
-  background-color: #218838;
-  border-color: #1e7e34;
-}
-
 .button.is-primary {
-  background-color: #007bff;
-  border-color: #007bff;
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
 }
 
 .button.is-primary:hover {
-  background-color: #0056b3;
-  border-color: #0056b3;
+  background-color: var(--primary-color);
+  filter: brightness(0.9);
+}
+
+.button.is-info {
+  background-color: var(--info-color);
+  border-color: var(--info-color);
+}
+
+.button.is-info:hover {
+  background-color: var(--info-color);
+  filter: brightness(0.9);
+}
+
+.button.is-danger {
+  background-color: var(--danger-color);
+  border-color: var(--danger-color);
+}
+
+.button.is-danger:hover {
+  background-color: var(--danger-color);
+  filter: brightness(0.9);
+}
+
+.button.is-success {
+  background-color: var(--success-color);
+  border-color: var(--success-color);
+}
+
+.button.is-success:hover {
+  background-color: var(--success-color);
+  filter: brightness(0.9);
 }
 
 /* Melhorias na tabela */
@@ -827,14 +827,14 @@ const handleAgendamentoCriado = async (novoAgendamento) => {
 }
 
 .table thead th {
-  background: #f8f9fa;
-  color: #495057;
+  background: var(--background-color);
+  color: var(--text-color);
   font-weight: 600;
-  border-bottom: 2px solid #dee2e6;
+  border-bottom: 2px solid var(--border-color);
 }
 
 .table tbody tr:hover {
-  background-color: #f8f9fa;
+  background-color: var(--background-color);
 }
 
 /* Melhorias nos tags de status */
@@ -852,24 +852,24 @@ const handleAgendamentoCriado = async (novoAgendamento) => {
 
 /* Melhorias nos campos de formulário */
 .input, .select select, .textarea {
-  border: 1px solid #ced4da;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
 }
 
 .input:focus, .select select:focus, .textarea:focus {
-  border-color: #007bff;
+  border-color: var(--primary-color);
   box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 }
 
 /* Melhorias nos labels */
 .label {
-  color: #495057;
+  color: var(--text-color);
   font-weight: 600;
 }
 
 /* Melhorias na navbar */
 .navbar.is-primary {
-  background-color: #007bff;
+  background-color: var(--primary-color);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 

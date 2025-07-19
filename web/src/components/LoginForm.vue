@@ -64,14 +64,14 @@ const togglePasswordVisibility = () => {
 </script>
 
 <template>
-  <div class="login-container">
-    <div class="login-card">
-      <div class="login-header">
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="auth-header">
         <div class="logo">
           <i class="fas fa-paw"></i>
         </div>
-        <h1 class="title is-3">Bem-vindo ao {{ brandConfig?.nome_estabelecimento || 'AgendaVet' }}</h1>
-        <p class="subtitle">Faça login para acessar sua conta</p>
+        <h1 class="auth-title">Bem-vindo ao {{ brandConfig?.nome_estabelecimento || 'AgendaVet' }}</h1>
+        <p class="auth-subtitle">Faça login para acessar sua conta</p>
       </div>
 
       <form @submit.prevent="handleLogin" class="login-form">
@@ -167,43 +167,45 @@ const togglePasswordVisibility = () => {
 </template>
 
 <style scoped>
-.login-container {
+.auth-container {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #2E7D32 0%, #A5D6A7 100%);
-  padding: 1rem;
+  padding: 2rem;
 }
 
-.login-card {
+.auth-card {
   background: white;
   border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-  padding: 2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  padding: 2.5rem;
   width: 100%;
   max-width: 400px;
 }
 
-.login-header {
+.auth-header {
   text-align: center;
   margin-bottom: 2rem;
 }
 
 .logo {
   font-size: 3rem;
-  color: #2E7D32;
+  color: var(--primary-color);
   margin-bottom: 1rem;
 }
 
-.title {
-  color: #2E7D32;
+.auth-title {
+  color: var(--primary-color);
+  font-size: 2rem;
+  font-weight: bold;
   margin-bottom: 0.5rem;
 }
 
-.subtitle {
-  color: #666;
-  font-size: 1rem;
+.auth-subtitle {
+  color: var(--text-color);
+  opacity: 0.7;
 }
 
 .login-form {
@@ -215,30 +217,30 @@ const togglePasswordVisibility = () => {
 }
 
 .label {
-  color: #333;
+  color: var(--text-color);
   font-weight: 600;
   margin-bottom: 0.5rem;
 }
 
 .input {
   border-radius: 8px;
-  border: 2px solid #e9ecef;
+  border: 2px solid var(--border-color);
   transition: border-color 0.2s;
 }
 
 .input:focus {
-  border-color: #2E7D32;
+  border-color: var(--primary-color);
   box-shadow: 0 0 0 0.125em rgba(46, 125, 50, 0.25);
 }
 
 .password-toggle {
   cursor: pointer;
-  color: #666;
+  color: var(--text-color);
   transition: color 0.2s;
 }
 
 .password-toggle:hover {
-  color: #2E7D32;
+  color: var(--primary-color);
 }
 
 .notification {
@@ -265,17 +267,17 @@ const togglePasswordVisibility = () => {
 .demo-accounts {
   margin-top: 1.5rem;
   padding-top: 1.5rem;
-  border-top: 1px solid #e9ecef;
+  border-top: 1px solid var(--border-color);
 }
 
 .demo-info {
   font-size: 0.875rem;
-  color: #666;
+  color: var(--text-color);
 }
 
 .demo-info summary {
   cursor: pointer;
-  color: #2E7D32;
+  color: var(--primary-color);
   font-weight: 600;
   margin-bottom: 0.5rem;
 }
@@ -298,7 +300,7 @@ const togglePasswordVisibility = () => {
 }
 
 @media (max-width: 480px) {
-  .login-card {
+  .auth-card {
     padding: 1.5rem;
   }
   
@@ -306,7 +308,7 @@ const togglePasswordVisibility = () => {
     font-size: 2.5rem;
   }
   
-  .title {
+  .auth-title {
     font-size: 1.5rem;
   }
 }

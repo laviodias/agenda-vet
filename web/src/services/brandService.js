@@ -14,6 +14,13 @@ class BrandService {
         cor_secundaria: '#363636', 
         cor_accent: '#3273dc',
         cor_background: '#f5f5f5',
+        cor_success: '#48c774',
+        cor_danger: '#f14668',
+        cor_warning: '#ffdd57',
+        cor_info: '#3298dc',
+        cor_texto: '#363636',
+        cor_borda: '#dbdbdb',
+        cor_sombra: '#000000',
         logo_url: null,
         endereco: '',
         telefone: '',
@@ -91,11 +98,38 @@ class BrandService {
   aplicarTema(configuracao) {
     const root = document.documentElement
     
-    // Aplicar cores CSS
+    // Aplicar cores CSS principais
     root.style.setProperty('--primary-color', configuracao.cor_primaria)
     root.style.setProperty('--secondary-color', configuracao.cor_secundaria)
     root.style.setProperty('--accent-color', configuracao.cor_accent)
     root.style.setProperty('--background-color', configuracao.cor_background)
+    
+    // Aplicar cores de status e feedback
+    root.style.setProperty('--success-color', configuracao.cor_success)
+    root.style.setProperty('--danger-color', configuracao.cor_danger)
+    root.style.setProperty('--warning-color', configuracao.cor_warning)
+    root.style.setProperty('--info-color', configuracao.cor_info)
+    
+    // Aplicar cores de interface
+    root.style.setProperty('--text-color', configuracao.cor_texto)
+    root.style.setProperty('--border-color', configuracao.cor_borda)
+    root.style.setProperty('--shadow-color', configuracao.cor_sombra)
+    
+    // Manter compatibilidade com o sistema anterior
+    root.style.setProperty('--primary', configuracao.cor_primaria)
+    root.style.setProperty('--secondary', configuracao.cor_secundaria)
+    root.style.setProperty('--background', configuracao.cor_background)
+    root.style.setProperty('--text', configuracao.cor_texto)
+    
+    // Preview de cores para o formulário
+    root.style.setProperty('--preview-primary', configuracao.cor_primaria)
+    root.style.setProperty('--preview-secondary', configuracao.cor_secundaria)
+    root.style.setProperty('--preview-accent', configuracao.cor_accent)
+    root.style.setProperty('--preview-background', configuracao.cor_background)
+    root.style.setProperty('--preview-success', configuracao.cor_success)
+    root.style.setProperty('--preview-danger', configuracao.cor_danger)
+    root.style.setProperty('--preview-warning', configuracao.cor_warning)
+    root.style.setProperty('--preview-info', configuracao.cor_info)
     
     // Atualizar título da página
     document.title = configuracao.nome_estabelecimento || 'AgendaVet'
