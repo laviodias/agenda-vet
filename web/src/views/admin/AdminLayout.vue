@@ -69,7 +69,7 @@ const logout = () => {
               <span class="icon">
                 <i class="fas fa-calendar-alt"></i>
               </span>
-              <span>Agenda</span>
+              <span>Disponibilidade</span>
             </span>
           </RouterLink>
 

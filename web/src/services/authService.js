@@ -224,6 +224,16 @@ class AuthService {
     }
   }
 
+  // Buscar profissionais disponíveis para um dia específico
+  async getProfissionaisDisponiveis(diaSemana) {
+    try {
+      return await apiService.get(`/admin/profissionais/disponiveis/?dia_semana=${diaSemana}`)
+    } catch (error) {
+      console.error('Erro ao buscar profissionais disponíveis:', error)
+      throw error
+    }
+  }
+
   // Salvar usuário no localStorage
   setCurrentUser(user) {
     localStorage.setItem('user', JSON.stringify(user))

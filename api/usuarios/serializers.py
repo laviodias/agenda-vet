@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from .models import Usuario
+from .models import Usuario, DisponibilidadeProfissional
 from animais.models import Animal
 
 
@@ -99,3 +99,39 @@ class RegistroClienteSerializer(serializers.Serializer):
             'usuario': user,
             'pet': pet
         } 
+
+class UsuarioCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Usuario
+        fields = ['username', 'email', 'nome', 'tipo', 'telefone', 'endereco', 'crmv', 'especialidade', 'password']
+        extra_kwargs = {
+            'password': {'write_only': True},
+            'username': {'required': False}
+        }
+
+    def create(self, validated_data):
+        # Se username não foi fornecido, usar email
+        if 'username' not in validated_data:
+            validated_data['username'] = validated_data['email']
+        
+        # Definir tipo padrão se não fornecido
+        if 'tipo' not in validated_data:
+            validated_data['tipo'] = 'cliente'
+        
+        # Criar usuário com senha criptografada
+        user = Usuario.objects.create_user(**validated_data)
+        return user
+
+class DisponibilidadeProfissionalSerializer(serializers.ModelSerializer):
+    profissional_nome = serializers.CharField(source='profissional.nome', read_only=True)
+    dia_semana_nome = serializers.CharField(source='get_dia_semana_display', read_only=True)
+    
+    class Meta:
+        model = DisponibilidadeProfissional
+        fields = ['id', 'profissional', 'profissional_nome', 'dia_semana', 'dia_semana_nome', 'hora_inicio', 'hora_fim', 'ativo', 'criado_em', 'atualizado_em']
+        read_only_fields = ['id', 'criado_em', 'atualizado_em']
+
+class DisponibilidadeProfissionalCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DisponibilidadeProfissional
+        fields = ['profissional', 'dia_semana', 'hora_inicio', 'hora_fim', 'ativo'] 

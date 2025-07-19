@@ -75,3 +75,39 @@ class Usuario(AbstractUser):
     """
     from core.models import UserRole  # Import local para evitar import circular
     return UserRole.objects.filter(user=self, is_active=True).select_related('role')
+
+
+class DisponibilidadeProfissional(models.Model):
+    DIAS_SEMANA = (
+        (0, 'Segunda-feira'),
+        (1, 'Terça-feira'),
+        (2, 'Quarta-feira'),
+        (3, 'Quinta-feira'),
+        (4, 'Sexta-feira'),
+        (5, 'Sábado'),
+        (6, 'Domingo'),
+    )
+    
+    profissional = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='disponibilidades')
+    dia_semana = models.IntegerField(choices=DIAS_SEMANA)
+    hora_inicio = models.TimeField()
+    hora_fim = models.TimeField()
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ['profissional', 'dia_semana']
+        ordering = ['profissional', 'dia_semana']
+    
+    def __str__(self):
+        return f"{self.profissional.nome} - {self.get_dia_semana_display()} ({self.hora_inicio} às {self.hora_fim})"
+    
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.hora_inicio >= self.hora_fim:
+            raise ValidationError('Hora de início deve ser menor que hora de fim')
+    
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)

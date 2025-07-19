@@ -18,23 +18,48 @@
 
     <!-- Form -->
     <form v-else @submit.prevent="handleSubmit" class="agendamento-form box">
-      <WeeklyCalendar 
-        v-model="agendamento.dateTime" 
-        :profissional="agendamento.profissional"
-      />
+      <div class="field">
+        <label for="data" class="label">Data</label>
+        <div class="control">
+          <input 
+            type="date" 
+            id="data"
+            class="input" 
+            v-model="agendamento.data"
+            :min="today"
+            @change="carregarProfissionaisDisponiveis"
+            required
+          />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="hora" class="label">Horário</label>
+        <div class="control">
+          <input 
+            type="time" 
+            id="hora"
+            class="input" 
+            v-model="agendamento.hora"
+            @change="filtrarProfissionaisPorHorario"
+            required
+          />
+        </div>
+      </div>
       
-      <div class="field mt-4">
+      <div class="field">
         <label for="profissional" class="label">Profissional</label>
         <div class="control">
           <div class="select is-fullwidth is-light">
             <select id="profissional" v-model="agendamento.profissional" required>
               <option value="">Selecione um profissional</option>
               <option 
-                v-for="profissional in profissionais" 
+                v-for="profissional in profissionaisDisponiveis" 
                 :key="profissional.id" 
                 :value="profissional.id"
               >
                 {{ profissional.nome }} ({{ profissional.especialidade || 'Sem especialidade' }})
+                - {{ profissional.hora_inicio }} às {{ profissional.hora_fim }}
               </option>
             </select>
           </div>
@@ -112,8 +137,7 @@
 </template>
 
 <script setup>
-import { reactive, onMounted, ref } from 'vue';
-import WeeklyCalendar from './WeeklyCalendar.vue';
+import { reactive, onMounted, ref, computed } from 'vue';
 import authService from '../services/authService.js';
 
 // Props
@@ -135,16 +159,29 @@ const emit = defineEmits(['close', 'agendamento-criado']);
 const loading = ref(false)
 const error = ref(null)
 const submitting = ref(false)
-const profissionais = ref([])
 const servicos = ref([])
+const profissionaisDisponiveis = ref([])
 
 const agendamento = reactive({
-  dateTime: { date: '', time: '' },
+  data: '',
+  hora: '',
   profissional: '',
   servico: '',
   pet: '',
   observacoes: ''
 });
+
+// Computed
+const today = computed(() => {
+  const today = new Date()
+  return today.toISOString().split('T')[0]
+})
+
+const diaSemana = computed(() => {
+  if (!agendamento.data) return null
+  const date = new Date(agendamento.data)
+  return date.getDay() // 0 = Domingo, 1 = Segunda, etc.
+})
 
 // Carregar dados na montagem
 onMounted(async () => {
@@ -162,13 +199,8 @@ const loadData = async () => {
     loading.value = true
     error.value = null
     
-    // Carregar profissionais e serviços em paralelo
-    const [profissionaisData, servicosData] = await Promise.all([
-      authService.getProfissionais(),
-      authService.getServicos()
-    ])
-    
-    profissionais.value = Array.isArray(profissionaisData) ? profissionaisData : []
+    // Carregar serviços
+    const servicosData = await authService.getServicos()
     servicos.value = Array.isArray(servicosData) ? servicosData : []
     
   } catch (err) {
@@ -179,11 +211,42 @@ const loadData = async () => {
   }
 }
 
+// Carregar profissionais disponíveis para o dia selecionado
+const carregarProfissionaisDisponiveis = async () => {
+  if (!agendamento.data || !diaSemana.value) return
+  
+  try {
+    const response = await authService.getProfissionaisDisponiveis(diaSemana.value)
+    profissionaisDisponiveis.value = response.data || []
+    agendamento.profissional = '' // Reset seleção
+  } catch (err) {
+    console.error('Erro ao carregar profissionais disponíveis:', err)
+    error.value = 'Erro ao carregar profissionais disponíveis'
+  }
+}
+
+// Filtrar profissionais por horário
+const filtrarProfissionaisPorHorario = () => {
+  if (!agendamento.hora) return
+  
+  const horaSelecionada = agendamento.hora
+  profissionaisDisponiveis.value = profissionaisDisponiveis.value.filter(prof => {
+    return horaSelecionada >= prof.hora_inicio && horaSelecionada <= prof.hora_fim
+  })
+  
+  agendamento.profissional = '' // Reset seleção
+}
+
 async function handleSubmit() {
   try {
     // Validar dados obrigatórios
-    if (!agendamento.dateTime.date || !agendamento.dateTime.time) {
-      error.value = 'Selecione uma data e horário'
+    if (!agendamento.data) {
+      error.value = 'Selecione uma data'
+      return
+    }
+    
+    if (!agendamento.hora) {
+      error.value = 'Selecione um horário'
       return
     }
     
@@ -201,59 +264,151 @@ async function handleSubmit() {
       error.value = 'Selecione um pet'
       return
     }
-
+    
     submitting.value = true
     error.value = null
-
-    // Preparar dados para a API
-    const agendamentoData = {
-      data_hora: `${agendamento.dateTime.date}T${agendamento.dateTime.time}:00`,
-      responsavel: agendamento.profissional,
-      servico: agendamento.servico,
-      animal: agendamento.pet,
-      observacoes: agendamento.observacoes || ''
-    }
-
-    // Chamar API para criar agendamento
-    const novoAgendamento = await authService.createAgendamento(agendamentoData)
     
-    console.log('Agendamento criado:', novoAgendamento)
-    emit('agendamento-criado', novoAgendamento)
-    emit('close')
+    // Criar data/hora completa
+    const dataHora = `${agendamento.data}T${agendamento.hora}:00`
+    
+    const agendamentoData = {
+      data_hora: dataHora,
+      profissional: agendamento.profissional,
+      servico: agendamento.servico,
+      pet: agendamento.pet,
+      observacoes: agendamento.observacoes
+    }
+    
+    const response = await authService.createAgendamento(agendamentoData)
+    
+    // Emitir evento de sucesso
+    emit('agendamento-criado', response.data)
+    
+    // Limpar formulário
+    agendamento.data = ''
+    agendamento.hora = ''
+    agendamento.profissional = ''
+    agendamento.servico = ''
+    agendamento.pet = ''
+    agendamento.observacoes = ''
+    
+    // Fechar modal
+    handleClose()
     
   } catch (err) {
     console.error('Erro ao criar agendamento:', err)
-    error.value = 'Erro ao criar agendamento. Tente novamente.'
+    error.value = err.response?.data?.error || 'Erro ao criar agendamento. Tente novamente.'
   } finally {
     submitting.value = false
   }
 }
 
 function handleClose() {
-  emit('close');
+  emit('close')
 }
 </script>
 
 <style scoped>
 .agendamento-container {
-  min-height: 100vh;
-  background: var(--background, #F5F5F5);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-}
-.agendamento-form {
-  width: 100%;
-  max-width: 800px;
-  background: var(--scheme-main, #FFFFFF);
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: var(--shadow-md, 0 4px 6px rgba(0, 0, 0, 0.1));
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
 }
 
-.agendamento-form .label {
+.agendamento-form {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.field {
+  margin-bottom: 1rem;
+}
+
+.label {
+  font-weight: 500;
   color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.input, .select select, .textarea {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 14px;
+  width: 100%;
+}
+
+.input:focus, .select select:focus, .textarea:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+}
+
+.button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.button.is-primary {
+  background: #007bff;
+  color: white;
+}
+
+.button.is-primary:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.button.is-light {
+  background: #f8f9fa;
+  color: #333;
+  border: 1px solid #ddd;
+}
+
+.button.is-light:hover {
+  background: #e9ecef;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.notification {
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.notification.is-danger {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.delete {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  float: right;
+  color: #721c24;
+}
+
+.icon {
+  margin-right: 0.5rem;
+}
+
+.buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.buttons .button {
+  flex: 1;
 }
 </style> 

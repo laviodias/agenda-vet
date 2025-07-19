@@ -1,159 +1,44 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { RouterLink } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import DisponibilidadeProfissional from '../../components/DisponibilidadeProfissional.vue'
 import authService from '../../services/authService.js'
 
-const funcionarios = ref([])
-const servicos = ref([])
-const horariosDisponiveis = ref([])
+const profissionais = ref([])
+const selectedProfissional = ref('')
 const loading = ref(false)
 const error = ref(null)
-const submitting = ref(false)
 
-const novoHorario = ref({
-  funcionarioId: '',
-  servicoId: '',
-  data: '',
-  horaInicio: '',
-  horaFim: ''
-})
-
-// Carregar dados
-const loadData = async () => {
+const carregarProfissionais = async () => {
   try {
     loading.value = true
     error.value = null
-    
-    const [funcionariosData, servicosData] = await Promise.all([
-      authService.getProfissionais(),
-      authService.getServicos()
-    ])
-    
-    funcionarios.value = Array.isArray(funcionariosData) ? funcionariosData : []
-    servicos.value = Array.isArray(servicosData) ? servicosData : []
-    
+    const response = await authService.getProfissionais()
+    profissionais.value = Array.isArray(response) ? response : []
   } catch (err) {
-    console.error('Erro ao carregar dados:', err)
-    error.value = 'Erro ao carregar dados. Tente novamente.'
+    console.error('Erro ao carregar profissionais:', err)
+    error.value = 'Erro ao carregar profissionais. Tente novamente.'
   } finally {
     loading.value = false
   }
 }
 
-const servicosPorFuncionario = computed(() => {
-  const servicosDisponiveis = {}
-  funcionarios.value.forEach(funcionario => {
-    servicosDisponiveis[funcionario.id] = servicos.value.filter(servico => {
-      if (!servico.especialidades) return true
-      const especialidadesServico = servico.especialidades.split(',').map(esp => esp.trim())
-      return especialidadesServico.length === 0 || 
-             especialidadesServico.includes(funcionario.especialidade)
-    })
-  })
-  return servicosDisponiveis
-})
-
-const horariosPorFuncionario = computed(() => {
-  const horarios = {}
-  funcionarios.value.forEach(funcionario => {
-    horarios[funcionario.id] = horariosDisponiveis.value.filter(
-      h => h.funcionarioId === funcionario.id
-    )
-  })
-  return horarios
-})
-
-const atualizarHorarioFim = () => {
-  if (novoHorario.value.servicoId && novoHorario.value.horaInicio) {
-    const servico = servicos.value.find(s => s.id === novoHorario.value.servicoId)
-    if (servico) {
-      const inicio = new Date(`2000-01-01T${novoHorario.value.horaInicio}`)
-      const fim = new Date(inicio.getTime() + servico.duracao * 60000)
-      novoHorario.value.horaFim = fim.toTimeString().slice(0, 5)
-    }
-  }
+const carregarDisponibilidades = () => {
+  // Será chamado quando um profissional for selecionado
+  // O componente DisponibilidadeProfissional cuidará de carregar os dados
 }
 
-const adicionarHorario = async () => {
-  try {
-    if (!novoHorario.value.funcionarioId || !novoHorario.value.servicoId || 
-        !novoHorario.value.data || !novoHorario.value.horaInicio || !novoHorario.value.horaFim) {
-      error.value = 'Por favor, preencha todos os campos'
-      return
-    }
-
-    submitting.value = true
-    error.value = null
-
-    const horarioData = {
-      responsavel_id: novoHorario.value.funcionarioId,
-      servico_id: novoHorario.value.servicoId,
-      data: novoHorario.value.data,
-      hora_inicio: novoHorario.value.horaInicio,
-      hora_fim: novoHorario.value.horaFim
-    }
-
-    await authService.createHorarioDisponivel(horarioData)
-    
-    // Recarregar dados
-    await loadData()
-    
-    // Limpar formulário
-    novoHorario.value = {
-      funcionarioId: '',
-      servicoId: '',
-      data: '',
-      horaInicio: '',
-      horaFim: ''
-    }
-    
-  } catch (err) {
-    console.error('Erro ao adicionar horário:', err)
-    error.value = 'Erro ao adicionar horário. Tente novamente.'
-  } finally {
-    submitting.value = false
-  }
-}
-
-const removerHorario = async (id) => {
-  if (!confirm('Tem certeza que deseja remover este horário?')) {
-    return
-  }
-
-  try {
-    await authService.deleteHorarioDisponivel(id)
-    await loadData()
-  } catch (err) {
-    console.error('Erro ao remover horário:', err)
-    error.value = 'Erro ao remover horário. Tente novamente.'
-  }
-}
-
-const formatarData = (data) => {
-  return new Date(data).toLocaleDateString('pt-BR')
-}
-
-const getServicoNome = (servicoId) => {
-  const servico = servicos.value.find(s => s.id === servicoId)
-  return servico ? servico.nome : 'Serviço não encontrado'
-}
-
-// Carregar dados na montagem
 onMounted(() => {
-  loadData()
+  carregarProfissionais()
 })
 </script>
 
 <template>
   <div class="agenda-container">
     <div class="header-section">
-      <h1 class="title is-2 mb-4">Gerenciamento de Agenda</h1>
-      <RouterLink to="/admin/agendamentos" class="button is-info">
-        <span class="icon">
-          <i class="fas fa-list"></i>
-        </span>
-        <span>Ver Todos os Agendamentos</span>
-      </RouterLink>
+      <h1 class="title is-2 mb-4">Gerenciamento de Disponibilidade</h1>
+      <p class="subtitle is-6 has-text-grey">
+        Configure a disponibilidade dos profissionais por dia da semana
+      </p>
     </div>
 
     <!-- Error state -->
@@ -167,181 +52,42 @@ onMounted(() => {
       <span class="icon is-large">
         <i class="fas fa-spinner fa-spin"></i>
       </span>
-      <p class="mt-3">Carregando dados...</p>
+      <p class="mt-3">Carregando profissionais...</p>
     </div>
 
-    <!-- Formulário de Horários -->
+    <!-- Seleção de Profissional -->
     <div v-else class="box mb-6">
-      <h2 class="title is-4 mb-4">Adicionar Horário Disponível</h2>
-      <div class="columns is-multiline">
-        <div class="column is-6">
-          <div class="field">
-            <label class="label">Funcionário *</label>
-            <div class="control">
-              <div class="select is-fullwidth">
-                <select 
-                  v-model="novoHorario.funcionarioId" 
-                  required
-                  @change="novoHorario.servicoId = ''"
-                >
-                  <option value="">Selecione um funcionário</option>
-                  <option 
-                    v-for="funcionario in funcionarios" 
-                    :key="funcionario.id" 
-                    :value="funcionario.id"
-                  >
-                    {{ funcionario.nome }} - {{ funcionario.especialidade || 'Sem especialidade' }}
-                  </option>
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="column is-6">
-          <div class="field">
-            <label class="label">Serviço *</label>
-            <div class="control">
-              <div class="select is-fullwidth">
-                <select 
-                  v-model="novoHorario.servicoId" 
-                  required
-                  :disabled="!novoHorario.funcionarioId"
-                  @change="atualizarHorarioFim"
-                >
-                  <option value="">Selecione um serviço</option>
-                  <option 
-                    v-for="servico in servicosPorFuncionario[novoHorario.funcionarioId] || []" 
-                    :key="servico.id" 
-                    :value="servico.id"
-                  >
-                    {{ servico.nome }} ({{ servico.duracao }}min)
-                  </option>
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="column is-4">
-          <div class="field">
-            <label class="label">Data *</label>
-            <div class="control">
-              <input 
-                v-model="novoHorario.data"
-                class="input" 
-                type="date" 
-                required
+      <h2 class="title is-4 mb-4">Selecionar Profissional</h2>
+      <div class="field">
+        <label class="label">Profissional</label>
+        <div class="control">
+          <div class="select is-fullwidth">
+            <select v-model="selectedProfissional" @change="carregarDisponibilidades">
+              <option value="">Selecione um profissional</option>
+              <option 
+                v-for="prof in profissionais" 
+                :key="prof.id" 
+                :value="prof.id"
               >
-            </div>
-          </div>
-        </div>
-
-        <div class="column is-4">
-          <div class="field">
-            <label class="label">Hora Início *</label>
-            <div class="control">
-              <input 
-                v-model="novoHorario.horaInicio"
-                class="input" 
-                type="time" 
-                required
-                @change="atualizarHorarioFim"
-              >
-            </div>
-          </div>
-        </div>
-
-        <div class="column is-4">
-          <div class="field">
-            <label class="label">Hora Fim *</label>
-            <div class="control">
-              <input 
-                v-model="novoHorario.horaFim"
-                class="input" 
-                type="time" 
-                required
-              >
-            </div>
-          </div>
-        </div>
-
-        <div class="column is-12">
-          <div class="field">
-            <div class="control">
-              <button 
-                @click="adicionarHorario"
-                class="button is-primary is-fullwidth"
-                :disabled="submitting"
-              >
-                <span v-if="submitting" class="icon">
-                  <i class="fas fa-spinner fa-spin"></i>
-                </span>
-                <span v-else class="icon">
-                  <i class="fas fa-plus"></i>
-                </span>
-                <span>{{ submitting ? 'Adicionando...' : 'Adicionar Horário' }}</span>
-              </button>
-            </div>
+                {{ prof.nome }} - {{ prof.especialidade || 'Sem especialidade' }}
+              </option>
+            </select>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Lista de Horários -->
-    <div class="box">
-      <h2 class="title is-4 mb-4">Horários Disponíveis</h2>
-      
-      <div v-if="funcionarios.length === 0" class="has-text-centered py-6">
-        <span class="icon is-large has-text-grey-light">
-          <i class="fas fa-calendar"></i>
-        </span>
-        <p class="mt-3 has-text-grey">Nenhum funcionário cadastrado</p>
-      </div>
+    <!-- Gerenciamento de Disponibilidade -->
+    <div v-if="selectedProfissional" class="disponibilidade-section">
+      <DisponibilidadeProfissional :profissional-id="selectedProfissional" />
+    </div>
 
-      <div v-else>
-        <div v-for="funcionario in funcionarios" :key="funcionario.id" class="mb-6">
-          <h3 class="title is-5 mb-3">{{ funcionario.nome }}</h3>
-          
-          <div v-if="horariosPorFuncionario[funcionario.id]?.length > 0" class="table-container">
-            <table class="table is-fullwidth is-striped">
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Serviço</th>
-                  <th>Hora Início</th>
-                  <th>Hora Fim</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="horario in horariosPorFuncionario[funcionario.id]" :key="horario.id">
-                  <td>{{ formatarData(horario.data) }}</td>
-                  <td>{{ getServicoNome(horario.servicoId) }}</td>
-                  <td>{{ horario.horaInicio }}</td>
-                  <td>{{ horario.horaFim }}</td>
-                  <td>
-                    <button 
-                      @click="removerHorario(horario.id)"
-                      class="button is-danger is-small"
-                    >
-                      <span class="icon">
-                        <i class="fas fa-trash"></i>
-                      </span>
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          
-          <div v-else class="has-text-centered py-4">
-            <span class="icon has-text-grey-light">
-              <i class="fas fa-calendar-times"></i>
-            </span>
-            <p class="mt-2 has-text-grey">Nenhum horário cadastrado para este funcionário</p>
-          </div>
-        </div>
+    <!-- Mensagem quando nenhum profissional está selecionado -->
+    <div v-else class="no-selection">
+      <div class="no-selection-content">
+        <i class="fas fa-user-md"></i>
+        <h3>Selecione um Profissional</h3>
+        <p>Escolha um profissional acima para gerenciar sua disponibilidade</p>
       </div>
     </div>
   </div>
@@ -349,30 +95,107 @@ onMounted(() => {
 
 <style scoped>
 .agenda-container {
-  padding: 1rem;
+  padding: 20px;
 }
 
 .header-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  margin-bottom: 20px;
+}
+
+.header-section h1 {
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.subtitle {
+  margin-bottom: 0;
+}
+
+.box {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  padding: 20px;
+}
+
+.field {
   margin-bottom: 1rem;
 }
 
-.table-container {
-  overflow-x: auto;
+.label {
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 0.5rem;
 }
 
-.buttons {
-  margin: 0;
+.select select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
 }
 
-.button .icon {
-  margin-right: 0;
+.select select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
 }
 
-.tag {
-  min-width: 100px;
+.disponibilidade-section {
+  margin-top: 20px;
+}
+
+.no-selection {
+  display: flex;
   justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+
+.no-selection-content {
+  text-align: center;
+  color: #666;
+}
+
+.no-selection-content i {
+  font-size: 48px;
+  margin-bottom: 15px;
+  color: #ddd;
+}
+
+.no-selection-content h3 {
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+.no-selection-content p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.notification {
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.notification.is-danger {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.delete {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  float: right;
+  color: #721c24;
+}
+
+.icon {
+  margin-right: 0.5rem;
 }
 </style> 
