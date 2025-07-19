@@ -63,6 +63,15 @@ const logout = () => {
               <span>Marca</span>
             </span>
           </RouterLink>
+
+          <RouterLink class="navbar-item" to="/admin/roles">
+            <span class="icon-text">
+              <span class="icon">
+                <i class="fas fa-user-shield"></i>
+              </span>
+              <span>Cargos</span>
+            </span>
+          </RouterLink>
         </div>
 
         <div class="navbar-end">

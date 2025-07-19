@@ -86,6 +86,16 @@ const routes = [
           requiresAdmin: true,
           permissions: [{ resource: 'brand', action: 'manage' }]
         }
+      },
+      {
+        path: 'roles',
+        name: 'Roles',
+        component: () => import('../views/admin/Roles.vue'),
+        meta: { 
+          requiresAuth: true, 
+          requiresAdmin: true,
+          permissions: [{ resource: 'usuarios', action: 'manage' }]
+        }
       }
     ]
   }

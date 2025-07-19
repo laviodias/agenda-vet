@@ -1,32 +1,12 @@
 from rest_framework import serializers
-from .models import Empresa, Usuario, ConfiguracaoBrand, Role, Permission, RolePermission, UserRole
+from .models import Empresa, ConfiguracaoBrand, Role, Permission, RolePermission, UserRole
+from usuarios.models import Usuario
 
 
 class EmpresaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Empresa
         fields = '__all__'
-
-
-class UsuarioSerializer(serializers.ModelSerializer):
-    roles = serializers.SerializerMethodField()
-    permissions = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = Usuario
-        fields = ['id', 'nome', 'email', 'telefone', 'tipo_usuario', 'crmv', 'especialidade', 
-                 'is_active', 'date_joined', 'roles', 'permissions']
-        read_only_fields = ['date_joined']
-    
-    def get_roles(self, obj):
-        """Retorna os roles ativos do usuário"""
-        return [{'name': role.name, 'display_name': role.display_name} 
-                for role in obj.get_roles()]
-    
-    def get_permissions(self, obj):
-        """Retorna as permissões do usuário"""
-        return [{'resource': perm.resource, 'action': perm.action, 'codename': perm.codename}
-                for perm in obj.get_permissions()]
 
 
 class ConfiguracaoBrandSerializer(serializers.ModelSerializer):
@@ -83,113 +63,73 @@ class PermissionSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Permission
-        fields = ['id', 'resource', 'action', 'description', 'resource_display', 
-                 'action_display', 'codename', 'created_at']
-        read_only_fields = ['created_at']
-
-
-class RoleSerializer(serializers.ModelSerializer):
-    permissions = PermissionSerializer(many=True, read_only=True)
-    permissions_count = serializers.SerializerMethodField()
-    users_count = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = Role
-        fields = ['id', 'name', 'display_name', 'description', 'is_active', 
-                 'permissions', 'permissions_count', 'users_count', 'created_at', 'updated_at']
-        read_only_fields = ['created_at', 'updated_at']
-    
-    def get_permissions_count(self, obj):
-        """Retorna o número de permissões do role"""
-        return obj.permissions.count()
-    
-    def get_users_count(self, obj):
-        """Retorna o número de usuários com este role"""
-        return obj.user_assignments.filter(is_active=True).count()
+        fields = ['id', 'resource', 'action', 'description', 'resource_display', 'action_display', 'codename']
 
 
 class RolePermissionSerializer(serializers.ModelSerializer):
-    role_name = serializers.CharField(source='role.name', read_only=True)
-    role_display_name = serializers.CharField(source='role.display_name', read_only=True)
-    permission_description = serializers.CharField(source='permission.description', read_only=True)
-    granted_by_name = serializers.CharField(source='granted_by.nome', read_only=True)
+    permission = PermissionSerializer(read_only=True)
     
     class Meta:
         model = RolePermission
-        fields = ['id', 'role', 'permission', 'role_name', 'role_display_name',
-                 'permission_description', 'granted_at', 'granted_by', 'granted_by_name']
-        read_only_fields = ['granted_at', 'granted_by']
+        fields = ['id', 'permission', 'granted_at', 'granted_by']
+
+
+class RoleSerializer(serializers.ModelSerializer):
+    permissions = RolePermissionSerializer(many=True, read_only=True)
+    permissions_count = serializers.SerializerMethodField()
     
-    def create(self, validated_data):
-        # Automaticamente atribuir o usuário que está criando
-        validated_data['granted_by'] = self.context['request'].user
-        return super().create(validated_data)
+    class Meta:
+        model = Role
+        fields = ['id', 'name', 'display_name', 'description', 'is_active', 'created_at', 'updated_at', 'permissions', 'permissions_count']
+    
+    def get_permissions_count(self, obj):
+        return obj.permissions.count()
 
 
 class UserRoleSerializer(serializers.ModelSerializer):
+    role = RoleSerializer(read_only=True)
     user_name = serializers.CharField(source='user.nome', read_only=True)
     user_email = serializers.CharField(source='user.email', read_only=True)
-    role_name = serializers.CharField(source='role.name', read_only=True)
-    role_display_name = serializers.CharField(source='role.display_name', read_only=True)
-    assigned_by_name = serializers.CharField(source='assigned_by.nome', read_only=True)
     
     class Meta:
         model = UserRole
-        fields = ['id', 'user', 'role', 'user_name', 'user_email', 'role_name', 
-                 'role_display_name', 'is_active', 'assigned_at', 'assigned_by', 'assigned_by_name']
-        read_only_fields = ['assigned_at', 'assigned_by']
-    
-    def create(self, validated_data):
-        # Automaticamente atribuir o usuário que está criando
-        validated_data['assigned_by'] = self.context['request'].user
-        return super().create(validated_data)
+        fields = ['id', 'role', 'user_name', 'user_email', 'assigned_at', 'assigned_by', 'is_active']
 
 
 class AssignRoleSerializer(serializers.Serializer):
-    """
-    Serializer para atribuir roles a usuários
-    """
-    user_id = serializers.IntegerField()
-    role_id = serializers.IntegerField()
-    
-    def validate_user_id(self, value):
-        try:
-            Usuario.objects.get(id=value)
-        except Usuario.DoesNotExist:
-            raise serializers.ValidationError('Usuário não encontrado.')
-        return value
-    
-    def validate_role_id(self, value):
-        try:
-            role = Role.objects.get(id=value)
-            if not role.is_active:
-                raise serializers.ValidationError('Role não está ativo.')
-        except Role.DoesNotExist:
-            raise serializers.ValidationError('Role não encontrado.')
-        return value
-    
-    def validate(self, data):
-        # Verificar se a atribuição já existe
-        existing = UserRole.objects.filter(
-            user_id=data['user_id'],
-            role_id=data['role_id']
-        ).first()
-        
-        if existing and existing.is_active:
-            raise serializers.ValidationError('Usuário já possui este role.')
-        
-        return data
+    roles = serializers.ListField(child=serializers.IntegerField())
 
 
 class UserPermissionsSerializer(serializers.Serializer):
-    """
-    Serializer para listar permissões de um usuário
-    """
     user_id = serializers.IntegerField()
+    permissions = serializers.ListField(child=serializers.CharField())
+
+
+# Serializers para as novas views de roles
+class CreateRoleSerializer(serializers.ModelSerializer):
+    permissions = serializers.ListField(child=serializers.IntegerField(), required=False)
     
-    def validate_user_id(self, value):
-        try:
-            Usuario.objects.get(id=value)
-        except Usuario.DoesNotExist:
-            raise serializers.ValidationError('Usuário não encontrado.')
-        return value 
+    class Meta:
+        model = Role
+        fields = ['name', 'display_name', 'description', 'permissions']
+
+
+class UpdateRoleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Role
+        fields = ['name', 'display_name', 'description']
+
+
+class AssignPermissionsSerializer(serializers.Serializer):
+    permissions = serializers.ListField(child=serializers.IntegerField())
+
+
+class AssignUserRolesSerializer(serializers.Serializer):
+    roles = serializers.ListField(child=serializers.IntegerField())
+
+
+class RoleStatsSerializer(serializers.Serializer):
+    rolesCount = serializers.IntegerField()
+    permissionsCount = serializers.IntegerField()
+    usersCount = serializers.IntegerField()
+    assignmentsCount = serializers.IntegerField() 

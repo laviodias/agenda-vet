@@ -275,6 +275,124 @@ class AdminService {
       throw error
     }
   }
+
+  // ===== ROLES E PERMISSÕES =====
+  
+  // Buscar todos os roles
+  async getRoles(includeInactive = false) {
+    try {
+      const params = includeInactive ? { include_inactive: 'true' } : {}
+      return await apiService.get('/admin/roles/', params)
+    } catch (error) {
+      console.error('Erro ao buscar roles:', error)
+      throw error
+    }
+  }
+
+  // Criar novo role
+  async createRole(roleData) {
+    try {
+      return await apiService.post('/admin/roles/create/', roleData)
+    } catch (error) {
+      console.error('Erro ao criar role:', error)
+      throw error
+    }
+  }
+
+  // Atualizar role
+  async updateRole(roleId, roleData) {
+    try {
+      return await apiService.put(`/admin/roles/${roleId}/`, roleData)
+    } catch (error) {
+      console.error('Erro ao atualizar role:', error)
+      throw error
+    }
+  }
+
+  // Deletar role
+  async deleteRole(roleId) {
+    try {
+      return await apiService.delete(`/admin/roles/${roleId}/delete/`)
+    } catch (error) {
+      console.error('Erro ao deletar role:', error)
+      throw error
+    }
+  }
+
+  // Ativar/desativar role
+  async toggleRoleStatus(roleId) {
+    try {
+      return await apiService.patch(`/admin/roles/${roleId}/toggle/`)
+    } catch (error) {
+      console.error('Erro ao alterar status do role:', error)
+      throw error
+    }
+  }
+
+  // Buscar todas as permissões
+  async getPermissions() {
+    try {
+      return await apiService.get('/admin/permissions/')
+    } catch (error) {
+      console.error('Erro ao buscar permissões:', error)
+      throw error
+    }
+  }
+
+  // Atribuir permissões a um role
+  async assignPermissions(roleId, permissions) {
+    try {
+      return await apiService.post(`/admin/roles/${roleId}/permissions/`, {
+        permissions: permissions
+      })
+    } catch (error) {
+      console.error('Erro ao atribuir permissões:', error)
+      throw error
+    }
+  }
+
+  // Buscar usuários
+  async getUsers() {
+    try {
+      return await apiService.get('/admin/users/')
+    } catch (error) {
+      console.error('Erro ao buscar usuários:', error)
+      throw error
+    }
+  }
+
+  // Atribuir roles a um usuário
+  async assignUserRoles(userId, roles) {
+    try {
+      return await apiService.post('/admin/users/assign-roles', {
+        user_id: userId,
+        roles: roles
+      })
+    } catch (error) {
+      console.error('Erro ao atribuir roles ao usuário:', error)
+      throw error
+    }
+  }
+
+  // Buscar roles de um usuário específico
+  async getUserRoles(userId) {
+    try {
+      return await apiService.get(`/admin/users/${userId}/roles/`)
+    } catch (error) {
+      console.error('Erro ao buscar roles do usuário:', error)
+      throw error
+    }
+  }
+
+  // Buscar estatísticas de roles
+  async getRoleStats() {
+    try {
+      return await apiService.get('/admin/roles/stats/')
+    } catch (error) {
+      console.error('Erro ao buscar estatísticas:', error)
+      throw error
+    }
+  }
 }
 
 export default new AdminService() 

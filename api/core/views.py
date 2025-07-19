@@ -3,16 +3,20 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 from datetime import datetime, timedelta
 from django.db.models import Count, Sum, Q
-from .models import Empresa, Usuario, ConfiguracaoBrand, Role, Permission, RolePermission, UserRole
+from django.db import transaction
+from .models import Empresa, ConfiguracaoBrand, Role, Permission, RolePermission, UserRole
 from agendamentos.models import Agendamento
 from servicos.models import Servico
-from .serializers import (EmpresaSerializer, UsuarioSerializer, ConfiguracaoBrandSerializer,
+from .serializers import (EmpresaSerializer, ConfiguracaoBrandSerializer,
                          RoleSerializer, PermissionSerializer, RolePermissionSerializer, 
                          UserRoleSerializer, AssignRoleSerializer, UserPermissionsSerializer)
 from .permissions import PermissionChecker, require_permission, HasPermission, require_role
+from usuarios.models import Usuario
+from usuarios.serializers import UsuarioSerializer
 
 # Create your views here.
 
@@ -574,3 +578,336 @@ def can_access_admin(request):
         has_admin = user.has_role('admin')
     print(f"[can_access_admin] has_role('admin') = {has_admin}")
     return Response({'can_access_admin': has_admin})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@require_permission('usuarios', 'read')
+def get_roles(request):
+    """Listar todos os roles"""
+    include_inactive = request.GET.get('include_inactive', 'false').lower() == 'true'
+    
+    if include_inactive:
+        roles = Role.objects.all().prefetch_related('permissions__permission')
+    else:
+        roles = Role.objects.filter(is_active=True).prefetch_related('permissions__permission')
+    
+    serializer = RoleSerializer(roles, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@require_permission('usuarios', 'create')
+def create_role(request):
+    """Criar novo role"""
+    try:
+        with transaction.atomic():
+            role_data = {
+                'name': request.data.get('name'),
+                'display_name': request.data.get('display_name'),
+                'description': request.data.get('description', ''),
+                'is_active': True
+            }
+            
+            role = Role.objects.create(**role_data)
+            
+            # Atribuir permissões
+            permissions = request.data.get('permissions', [])
+            for perm_id in permissions:
+                try:
+                    permission = Permission.objects.get(id=perm_id)
+                    RolePermission.objects.create(
+                        role=role,
+                        permission=permission,
+                        granted_by=request.user
+                    )
+                except Permission.DoesNotExist:
+                    continue
+            
+            serializer = RoleSerializer(role)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+@require_permission('usuarios', 'update')
+def update_role(request, role_id):
+    """Atualizar role"""
+    try:
+        role = Role.objects.get(id=role_id)
+        
+        role.name = request.data.get('name', role.name)
+        role.display_name = request.data.get('display_name', role.display_name)
+        role.description = request.data.get('description', role.description)
+        role.save()
+        
+        serializer = RoleSerializer(role)
+        return Response(serializer.data)
+        
+    except Role.DoesNotExist:
+        return Response({'error': 'Role não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+@require_permission('usuarios', 'delete')
+def delete_role(request, role_id):
+    """Deletar role"""
+    try:
+        role = Role.objects.get(id=role_id)
+        role.is_active = False
+        role.save()
+        return Response({'message': 'Role desativado com sucesso'})
+        
+    except Role.DoesNotExist:
+        return Response({'error': 'Role não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+@require_permission('usuarios', 'update')
+def toggle_role_status(request, role_id):
+    """Ativar/desativar role"""
+    try:
+        role = Role.objects.get(id=role_id)
+        role.is_active = not role.is_active
+        role.save()
+        
+        status_text = 'ativado' if role.is_active else 'desativado'
+        return Response({'message': f'Role {status_text} com sucesso'})
+        
+    except Role.DoesNotExist:
+        return Response({'error': 'Role não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@require_permission('usuarios', 'read')
+def get_permissions(request):
+    """Listar todas as permissões"""
+    permissions = Permission.objects.all().order_by('resource', 'action')
+    serializer = PermissionSerializer(permissions, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@require_permission('usuarios', 'update')
+def assign_permissions(request, role_id):
+    """Atribuir permissões a um role"""
+    try:
+        role = Role.objects.get(id=role_id)
+        permissions = request.data.get('permissions', [])
+        
+        with transaction.atomic():
+            # Limpar permissões existentes
+            RolePermission.objects.filter(role=role).delete()
+            
+            # Adicionar novas permissões
+            for perm_id in permissions:
+                try:
+                    permission = Permission.objects.get(id=perm_id)
+                    RolePermission.objects.create(
+                        role=role,
+                        permission=permission,
+                        granted_by=request.user
+                    )
+                except Permission.DoesNotExist:
+                    continue
+        
+        return Response({'message': 'Permissões atualizadas com sucesso'})
+        
+    except Role.DoesNotExist:
+        return Response({'error': 'Role não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@require_permission('usuarios', 'read')
+def get_users(request):
+    """Listar usuários para atribuição de roles"""
+    users = Usuario.objects.filter(is_active=True).order_by('nome')
+    data = []
+    for user in users:
+        data.append({
+            'id': user.id,
+            'nome': user.nome,
+            'email': user.email,
+            'tipo': user.get_tipo_display()
+        })
+    return Response(data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@require_permission('usuarios', 'update')
+def assign_user_roles(request):
+    """Atribuir roles a um usuário"""
+    try:
+        user_id = request.data.get('user_id')
+        roles = request.data.get('roles', [])
+        
+        if not user_id:
+            return Response({'error': 'user_id é obrigatório'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user = Usuario.objects.get(id=user_id)
+        
+        with transaction.atomic():
+            # Limpar roles existentes
+            UserRole.objects.filter(user=user).delete()
+            
+            # Adicionar novos roles
+            for role_id in roles:
+                try:
+                    role = Role.objects.get(id=role_id, is_active=True)
+                    UserRole.objects.create(
+                        user=user,
+                        role=role,
+                        assigned_by=request.user
+                    )
+                except Role.DoesNotExist:
+                    continue
+        
+        return Response({'message': 'Roles atribuídos com sucesso'})
+        
+    except Usuario.DoesNotExist:
+        return Response({'error': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@require_permission('usuarios', 'read')
+def get_role_stats(request):
+    """Buscar estatísticas de roles"""
+    try:
+        roles_count = Role.objects.filter(is_active=True).count()
+        permissions_count = Permission.objects.count()
+        users_count = Usuario.objects.filter(is_active=True).count()
+        assignments_count = UserRole.objects.filter(is_active=True).count()
+        
+        return Response({
+            'rolesCount': roles_count,
+            'permissionsCount': permissions_count,
+            'usersCount': users_count,
+            'assignmentsCount': assignments_count
+        })
+        
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ===== VIEWS PARA CONFIGURAÇÕES DE MARCA =====
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def get_brand_config(request):
+    """Buscar configuração de marca ativa"""
+    try:
+        configuracao = ConfiguracaoBrand.get_configuracao_ativa()
+        if configuracao:
+            serializer = ConfiguracaoBrandSerializer(configuracao, context={'request': request})
+            return Response(serializer.data)
+        return Response({'message': 'Nenhuma configuração encontrada'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@require_permission('brand', 'read')
+def brand_config_list(request):
+    """Listar todas as configurações de marca"""
+    try:
+        configs = ConfiguracaoBrand.objects.all().order_by('-criado_em')
+        serializer = ConfiguracaoBrandSerializer(configs, many=True, context={'request': request})
+        return Response(serializer.data)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+@require_permission('brand', 'read')
+def brand_config_detail(request, pk):
+    """Detalhes de uma configuração específica"""
+    try:
+        config = ConfiguracaoBrand.objects.get(pk=pk)
+        
+        if request.method == 'GET':
+            serializer = ConfiguracaoBrandSerializer(config, context={'request': request})
+            return Response(serializer.data)
+        
+        elif request.method == 'PUT':
+            if not PermissionChecker.check_permission(request.user, 'brand', 'update'):
+                return Response({'error': 'Sem permissão para atualizar'}, status=status.HTTP_403_FORBIDDEN)
+            
+            serializer = ConfiguracaoBrandSerializer(config, data=request.data, context={'request': request})
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        elif request.method == 'DELETE':
+            if not PermissionChecker.check_permission(request.user, 'brand', 'delete'):
+                return Response({'error': 'Sem permissão para deletar'}, status=status.HTTP_403_FORBIDDEN)
+            
+            config.delete()
+            return Response({'message': 'Configuração deletada com sucesso'})
+            
+    except ConfiguracaoBrand.DoesNotExist:
+        return Response({'error': 'Configuração não encontrada'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@require_permission('brand', 'update')
+def activate_brand_config(request, pk):
+    """Ativar uma configuração de marca"""
+    try:
+        config = ConfiguracaoBrand.objects.get(pk=pk)
+        
+        # Desativar todas as outras configurações
+        ConfiguracaoBrand.objects.filter(ativo=True).update(ativo=False)
+        
+        # Ativar a configuração selecionada
+        config.ativo = True
+        config.save()
+        
+        serializer = ConfiguracaoBrandSerializer(config, context={'request': request})
+        return Response({
+            'message': 'Configuração ativada com sucesso',
+            'configuracao': serializer.data
+        })
+        
+    except ConfiguracaoBrand.DoesNotExist:
+        return Response({'error': 'Configuração não encontrada'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@require_permission('usuarios', 'read')
+def get_user_roles(request, user_id):
+    """Buscar roles de um usuário específico"""
+    try:
+        user = Usuario.objects.get(id=user_id)
+        user_roles = UserRole.objects.filter(user=user).select_related('role')
+        serializer = UserRoleSerializer(user_roles, many=True)
+        return Response(serializer.data)
+    except Usuario.DoesNotExist:
+        return Response({'error': 'Usuário não encontrado'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
