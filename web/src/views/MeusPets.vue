@@ -12,7 +12,7 @@ const animais = ref([
     nome: 'Rex',
     especie: 'Cão',
     raca: 'Labrador',
-    idade: '3 anos',
+    data_nascimento: '2022-03-15',
     peso: '25 kg',
     observacoes: 'Alérgico a alguns alimentos'
   },
@@ -21,7 +21,7 @@ const animais = ref([
     nome: 'Luna',
     especie: 'Gato',
     raca: 'Persa',
-    idade: '2 anos',
+    data_nascimento: '2023-01-20',
     peso: '4 kg',
     observacoes: 'Gosta de brincar com bolinhas'
   }
@@ -34,7 +34,7 @@ const novoPet = ref({
   nome: '',
   especie: 'Cão',
   raca: '',
-  idade: '',
+  data_nascimento: '',
   peso: '',
   observacoes: ''
 })
@@ -55,7 +55,7 @@ const adicionarPet = () => {
     nome: '',
     especie: 'Cão',
     raca: '',
-    idade: '',
+    data_nascimento: '',
     peso: '',
     observacoes: ''
   }
@@ -94,7 +94,7 @@ const cancelarAdicaoPet = () => {
     nome: '',
     especie: 'Cão',
     raca: '',
-    idade: '',
+    data_nascimento: '',
     peso: '',
     observacoes: ''
   }
@@ -107,6 +107,23 @@ const voltar = () => {
 const agendarParaPet = (animal) => {
   // Navegar para o dashboard com o pet selecionado para agendamento
   router.push({ path: '/cliente', query: { agendarPet: animal.id } })
+}
+
+const calcularIdade = (dataNascimento) => {
+  if (!dataNascimento) return 'Idade não informada'
+  
+  const hoje = new Date()
+  const nascimento = new Date(dataNascimento)
+  const diffTime = Math.abs(hoje - nascimento)
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  const anos = Math.floor(diffDays / 365)
+  const meses = Math.floor((diffDays % 365) / 30)
+  
+  if (anos > 0) {
+    return `${anos} ano${anos > 1 ? 's' : ''}${meses > 0 ? ` e ${meses} mes${meses > 1 ? 'es' : ''}` : ''}`
+  } else {
+    return `${meses} mes${meses > 1 ? 'es' : ''}`
+  }
 }
 </script>
 
@@ -189,7 +206,7 @@ const agendarParaPet = (animal) => {
                 <div class="media-content">
                   <p class="title is-4">{{ animal.nome }}</p>
                   <p class="subtitle is-6">{{ animal.especie }} - {{ animal.raca }}</p>
-                  <p class="help">{{ animal.idade }} • {{ animal.peso }}</p>
+                  <p class="help">{{ calcularIdade(animal.data_nascimento) }} • {{ animal.peso }}</p>
                   <p v-if="animal.observacoes" class="help mt-2">
                     <strong>Observações:</strong> {{ animal.observacoes }}
                   </p>
@@ -304,13 +321,12 @@ const agendarParaPet = (animal) => {
           <div class="columns">
             <div class="column is-6">
               <div class="field">
-                <label class="label">Idade</label>
+                <label class="label">Data de Nascimento</label>
                 <div class="control">
                   <input 
                     class="input" 
-                    type="text" 
-                    v-model="novoPet.idade"
-                    placeholder="Ex: 3 anos, 6 meses"
+                    type="date" 
+                    v-model="novoPet.data_nascimento"
                   >
                 </div>
               </div>
@@ -409,13 +425,12 @@ const agendarParaPet = (animal) => {
           <div class="columns">
             <div class="column is-6">
               <div class="field">
-                <label class="label">Idade</label>
+                <label class="label">Data de Nascimento</label>
                 <div class="control">
                   <input 
                     class="input" 
-                    type="text" 
-                    v-model="petSelecionado.idade"
-                    placeholder="Ex: 3 anos, 6 meses"
+                    type="date" 
+                    v-model="petSelecionado.data_nascimento"
                   >
                 </div>
               </div>
@@ -460,7 +475,7 @@ const agendarParaPet = (animal) => {
 <style scoped>
 .meus-pets-page {
   min-height: 100vh;
-  background: #f5f5f5;
+  background: #f8f9fa;
 }
 
 .welcome-section {
@@ -470,53 +485,144 @@ const agendarParaPet = (animal) => {
 
 .pet-card {
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   transition: transform 0.2s, box-shadow 0.2s;
+  border: 1px solid #e9ecef;
 }
 
 .pet-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .pet-avatar {
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background: #e8f5e8;
+  background: #e3f2fd;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #2E7D32;
+  color: #1976d2;
   font-size: 1.25rem;
 }
 
 .card-footer-item {
   cursor: pointer;
   transition: background-color 0.2s;
+  color: #495057;
 }
 
 .card-footer-item:hover {
-  background-color: #f5f5f5;
+  background-color: #f8f9fa;
+  color: #007bff;
 }
 
 .card-footer-item:active {
-  background-color: #e8e8e8;
+  background-color: #e9ecef;
+}
+
+.card-footer-item.has-text-danger:hover {
+  color: #dc3545 !important;
 }
 
 .empty-state {
   padding: 4rem 2rem;
-  color: #666;
+  color: #6c757d;
 }
 
 .empty-state .icon {
-  color: #ddd;
+  color: #dee2e6;
   font-size: 4rem;
 }
 
 .modal-card {
   max-width: 600px;
   width: 95%;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.modal-card-foot {
+  padding: 1rem 1.5rem;
+  background: #f8f9fa;
+  border-top: 1px solid #e9ecef;
+}
+
+.modal-card-foot .button {
+  margin-right: 0.5rem;
+}
+
+.modal-card-foot .button:last-child {
+  margin-right: 0;
+}
+
+/* Melhorias nos botões */
+.button.is-primary {
+  background-color: #007bff;
+  border-color: #007bff;
+}
+
+.button.is-primary:hover {
+  background-color: #0056b3;
+  border-color: #0056b3;
+}
+
+.button.is-info {
+  background-color: #17a2b8;
+  border-color: #17a2b8;
+}
+
+.button.is-info:hover {
+  background-color: #138496;
+  border-color: #117a8b;
+}
+
+.button.is-success {
+  background-color: #28a745;
+  border-color: #28a745;
+}
+
+.button.is-success:hover {
+  background-color: #218838;
+  border-color: #1e7e34;
+}
+
+.button.is-danger {
+  background-color: #dc3545;
+  border-color: #dc3545;
+}
+
+.button.is-danger:hover {
+  background-color: #c82333;
+  border-color: #bd2130;
+}
+
+/* Melhorias nos campos de formulário */
+.input, .select select, .textarea {
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+}
+
+.input:focus, .select select:focus, .textarea:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Melhorias nos labels */
+.label {
+  color: #495057;
+  font-weight: 600;
+}
+
+/* Melhorias na navbar */
+.navbar.is-primary {
+  background-color: #007bff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-item:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
 }
 
 @media (max-width: 768px) {
@@ -526,6 +632,15 @@ const agendarParaPet = (animal) => {
   
   .column {
     padding: 0.5rem;
+  }
+  
+  .modal-card-foot .button {
+    margin-bottom: 0.5rem;
+    width: 100%;
+  }
+  
+  .modal-card-foot .button:last-child {
+    margin-bottom: 0;
   }
 }
 </style> 

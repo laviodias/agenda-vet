@@ -32,6 +32,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/atendimentos',
+    name: 'Atendimentos',
+    component: () => import('../views/Atendimentos.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/admin',
     name: 'Admin',
     component: () => import('../views/admin/AdminLayout.vue'),
