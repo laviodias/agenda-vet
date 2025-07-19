@@ -120,13 +120,63 @@ class AuthService {
     }
   }
 
-  // Buscar profissionais
+  // Buscar horários disponíveis
+  async getHorariosDisponiveis(data) {
+    try {
+      return await apiService.get(`/agendamentos/horarios-disponiveis/?data=${data}`)
+    } catch (error) {
+      console.error('Erro ao buscar horários disponíveis:', error)
+      throw error
+    }
+  }
+
+  // Dashboard Stats
+  async getDashboardStats() {
+    try {
+      return await apiService.get('/agendamentos/dashboard/')
+    } catch (error) {
+      console.error('Erro ao buscar estatísticas do dashboard:', error)
+      throw error
+    }
+  }
+
+  // Agendamentos Recentes
+  async getAgendamentosRecentes() {
+    try {
+      return await apiService.get('/agendamentos/recentes/')
+    } catch (error) {
+      console.error('Erro ao buscar agendamentos recentes:', error)
+      throw error
+    }
+  }
+
+  // Todos os Agendamentos (admin)
+  async getAllAgendamentos() {
+    try {
+      return await apiService.get('/agendamentos/listar/')
+    } catch (error) {
+      console.error('Erro ao buscar todos os agendamentos:', error)
+      throw error
+    }
+  }
+
+  // Confirmar Agendamento
+  async confirmarAgendamento(agendamentoId) {
+    try {
+      return await apiService.patch(`/agendamentos/${agendamentoId}/confirmar/`)
+    } catch (error) {
+      console.error('Erro ao confirmar agendamento:', error)
+      throw error
+    }
+  }
+
+  // Buscar profissionais (mantido para compatibilidade, mas retorna lista vazia)
   async getProfissionais() {
     try {
       return await apiService.get('/usuarios/profissionais/')
     } catch (error) {
       console.error('Erro ao buscar profissionais:', error)
-      throw error
+      return []
     }
   }
 
@@ -136,20 +186,6 @@ class AuthService {
       return await apiService.get('/servicos/')
     } catch (error) {
       console.error('Erro ao buscar serviços:', error)
-      throw error
-    }
-  }
-
-  // Buscar horários disponíveis
-  async getHorariosDisponiveis(data, profissional) {
-    try {
-      const params = new URLSearchParams({
-        data: data,
-        profissional: profissional || ''
-      })
-      return await apiService.get(`/admin/horarios-disponiveis/?${params}`)
-    } catch (error) {
-      console.error('Erro ao buscar horários disponíveis:', error)
       throw error
     }
   }
@@ -200,36 +236,6 @@ class AuthService {
       return await apiService.delete(`/servicos/${servicoId}/deletar/`)
     } catch (error) {
       console.error('Erro ao deletar serviço:', error)
-      throw error
-    }
-  }
-
-  // Criar horário disponível
-  async createHorarioDisponivel(horarioData) {
-    try {
-      return await apiService.post('/admin/horarios-disponiveis/create/', horarioData)
-    } catch (error) {
-      console.error('Erro ao criar horário disponível:', error)
-      throw error
-    }
-  }
-
-  // Deletar horário disponível
-  async deleteHorarioDisponivel(horarioId) {
-    try {
-      return await apiService.delete(`/admin/horarios-disponiveis/${horarioId}/delete/`)
-    } catch (error) {
-      console.error('Erro ao deletar horário disponível:', error)
-      throw error
-    }
-  }
-
-  // Buscar profissionais disponíveis para um dia específico
-  async getProfissionaisDisponiveis(diaSemana) {
-    try {
-      return await apiService.get(`/admin/profissionais/disponiveis/?dia_semana=${diaSemana}`)
-    } catch (error) {
-      console.error('Erro ao buscar profissionais disponíveis:', error)
       throw error
     }
   }

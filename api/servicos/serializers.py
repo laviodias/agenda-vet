@@ -5,11 +5,10 @@ class ServicoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Servico
         fields = ['id', 'nome', 'descricao', 'preco', 'duracao', 'empresa']
-        read_only_fields = ['id']
         extra_kwargs = {
             'empresa': {'required': False}
         }
-
+    
     def create(self, validated_data):
         # Usar empresa com ID 1 fixo se não fornecida
         if 'empresa' not in validated_data:

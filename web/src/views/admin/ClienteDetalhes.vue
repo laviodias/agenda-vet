@@ -135,7 +135,6 @@
               <div class="agendamento-info">
                 <p><strong>Animal:</strong> {{ agendamento.animal_nome }}</p>
                 <p><strong>Data:</strong> {{ formatDateTime(agendamento.data_hora) }}</p>
-                <p><strong>Responsável:</strong> {{ agendamento.responsavel_nome || 'Não atribuído' }}</p>
               </div>
             </div>
           </div>

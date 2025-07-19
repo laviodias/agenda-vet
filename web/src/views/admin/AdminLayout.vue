@@ -28,15 +28,6 @@ const logout = () => {
 
       <div class="navbar-menu">
         <div class="navbar-start">
-          <RouterLink class="navbar-item" to="/admin/funcionarios">
-            <span class="icon-text">
-              <span class="icon">
-                <i class="fas fa-users"></i>
-              </span>
-              <span>Funcionários</span>
-            </span>
-          </RouterLink>
-
           <RouterLink class="navbar-item" to="/admin/clientes">
             <span class="icon-text">
               <span class="icon">
@@ -64,15 +55,6 @@ const logout = () => {
             </span>
           </RouterLink>
 
-          <RouterLink class="navbar-item" to="/admin/agenda">
-            <span class="icon-text">
-              <span class="icon">
-                <i class="fas fa-calendar-alt"></i>
-              </span>
-              <span>Disponibilidade</span>
-            </span>
-          </RouterLink>
-
           <RouterLink class="navbar-item" to="/admin/agendamentos">
             <span class="icon-text">
               <span class="icon">
@@ -91,14 +73,14 @@ const logout = () => {
             </span>
           </RouterLink>
 
-          <RouterLink class="navbar-item" to="/admin/roles">
+          <!-- <RouterLink class="navbar-item" to="/admin/roles">
             <span class="icon-text">
               <span class="icon">
                 <i class="fas fa-user-shield"></i>
               </span>
               <span>Cargos</span>
             </span>
-          </RouterLink>
+          </RouterLink> -->
         </div>
 
         <div class="navbar-end">

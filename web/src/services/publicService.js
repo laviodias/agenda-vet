@@ -4,7 +4,7 @@ class PublicService {
   // Buscar serviços disponíveis
   async getServicos() {
     try {
-      return await apiService.get('/servicos')
+      return await apiService.get('/servicos/')
     } catch (error) {
       console.error('Erro ao buscar serviços:', error)
       // Retornar dados mockados em caso de erro
@@ -44,7 +44,7 @@ class PublicService {
   // Buscar profissionais
   async getProfissionais() {
     try {
-      return await apiService.get('/profissionais')
+      return await apiService.get('/usuarios/profissionais/')
     } catch (error) {
       console.error('Erro ao buscar profissionais:', error)
       // Retornar dados mockados em caso de erro
@@ -77,7 +77,7 @@ class PublicService {
   // Buscar horários de funcionamento
   async getHorariosFuncionamento() {
     try {
-      return await apiService.get('/horarios-funcionamento')
+      return await apiService.get('/horarios-funcionamento/')
     } catch (error) {
       console.error('Erro ao buscar horários:', error)
       // Retornar dados mockados em caso de erro
@@ -96,7 +96,7 @@ class PublicService {
   // Buscar informações da clínica
   async getInfoClinica() {
     try {
-      return await apiService.get('/clinica/info')
+      return await apiService.get('/clinica/info/')
     } catch (error) {
       console.error('Erro ao buscar informações da clínica:', error)
       // Retornar dados mockados em caso de erro

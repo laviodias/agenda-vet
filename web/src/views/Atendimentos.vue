@@ -197,7 +197,6 @@
                 <th>Horário</th>
                 <th>Pet</th>
                 <th>Serviço</th>
-                <th>Profissional</th>
                 <th>Status</th>
                 <th>Ações</th>
               </tr>
@@ -220,7 +219,6 @@
                   </div>
                 </td>
                 <td>{{ atendimento.servico_nome || atendimento.servico }}</td>
-                <td>{{ atendimento.responsavel_nome || atendimento.responsavel || 'Não atribuído' }}</td>
                 <td>
                   <span class="tag" :class="getStatusColor(atendimento.status)">
                     {{ getStatusText(atendimento.status) }}
@@ -246,7 +244,7 @@
                 </td>
               </tr>
               <tr v-if="!filteredAtendimentos.length">
-                <td colspan="7" class="has-text-centered">
+                <td colspan="6" class="has-text-centered">
                   <div class="empty-state">
                     <span class="icon is-large">
                       <i class="fas fa-calendar-times"></i>
@@ -313,14 +311,6 @@
           </div>
           
           <div class="columns">
-            <div class="column is-6">
-              <div class="field">
-                <label class="label">Profissional</label>
-                <div class="control">
-                  <input class="input" type="text" :value="atendimentoSelecionado.responsavel_nome || atendimentoSelecionado.responsavel || 'Não atribuído'" readonly>
-                </div>
-              </div>
-            </div>
             <div class="column is-6">
               <div class="field">
                 <label class="label">Status</label>

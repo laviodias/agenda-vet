@@ -5,51 +5,12 @@ from rest_framework.response import Response
 from django.utils import timezone
 from datetime import datetime, timedelta
 from django.db.models import Sum, Count
-from .models import Agendamento, DisponibilidadeAgenda
-from .serializers import AgendamentoSerializer, DisponibilidadeAgendaSerializer
+from .models import Agendamento
+from .serializers import AgendamentoSerializer
 from usuarios.models import Usuario
 from animais.models import Animal
 from servicos.models import Servico
-from core.permissions import PermissionChecker, require_permission, require_role
-from core.views import dashboard_stats, agendamentos_recentes
-
-# Create your views here.
-
-class DisponibilidadeAgendaViewSet(viewsets.ModelViewSet):
-    queryset = DisponibilidadeAgenda.objects.all()
-    serializer_class = DisponibilidadeAgendaSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    
-    def get_permissions(self):
-        """
-        Definir permissões baseadas no sistema de roles
-        """
-        if self.action in ['list', 'retrieve']:
-            # Leitura de disponibilidade pode ser feita por qualquer usuário autenticado
-            permission_classes = [permissions.IsAuthenticated]
-        else:
-            # Modificações requerem permissão específica
-            permission_classes = [permissions.IsAuthenticated]
-        return [permission() for permission in permission_classes]
-    
-    def create(self, request, *args, **kwargs):
-        # Verificar permissão para gerenciar agendamentos
-        if not PermissionChecker.check_permission(request.user, 'agendamentos', 'manage'):
-            return PermissionChecker.get_permission_response('Você não tem permissão para gerenciar disponibilidade')
-        return super().create(request, *args, **kwargs)
-    
-    def update(self, request, *args, **kwargs):
-        # Verificar permissão para gerenciar agendamentos
-        if not PermissionChecker.check_permission(request.user, 'agendamentos', 'manage'):
-            return PermissionChecker.get_permission_response('Você não tem permissão para gerenciar disponibilidade')
-        return super().update(request, *args, **kwargs)
-    
-    def destroy(self, request, *args, **kwargs):
-        # Verificar permissão para gerenciar agendamentos
-        if not PermissionChecker.check_permission(request.user, 'agendamentos', 'manage'):
-            return PermissionChecker.get_permission_response('Você não tem permissão para gerenciar disponibilidade')
-        return super().destroy(request, *args, **kwargs)
-
+from core.permissions import PermissionChecker, require_permission
 
 class AgendamentoViewSet(viewsets.ModelViewSet):
     queryset = Agendamento.objects.all()
@@ -62,7 +23,7 @@ class AgendamentoViewSet(viewsets.ModelViewSet):
         """
         user = self.request.user
         
-        # Admins e profissionais veem todos os agendamentos
+        # Admins veem todos os agendamentos
         if PermissionChecker.check_permission(user, 'agendamentos', 'list'):
             return Agendamento.objects.all()
         
@@ -80,7 +41,7 @@ class AgendamentoViewSet(viewsets.ModelViewSet):
         if agendamento.cliente == request.user:
             return super().update(request, *args, **kwargs)
         
-        # Profissionais/admins podem editar qualquer agendamento
+        # Admins podem editar qualquer agendamento
         if PermissionChecker.check_permission(request.user, 'agendamentos', 'update'):
             return super().update(request, *args, **kwargs)
         
@@ -93,7 +54,7 @@ class AgendamentoViewSet(viewsets.ModelViewSet):
         if agendamento.cliente == request.user:
             return super().destroy(request, *args, **kwargs)
         
-        # Profissionais/admins podem cancelar qualquer agendamento
+        # Admins podem cancelar qualquer agendamento
         if PermissionChecker.check_permission(request.user, 'agendamentos', 'delete'):
             return super().destroy(request, *args, **kwargs)
         
@@ -119,15 +80,64 @@ def listar_agendamentos_cliente(request):
 @permission_classes([permissions.IsAuthenticated])
 def listar_todos_agendamentos(request):
     """
-    Lista todos os agendamentos (admin/profissional)
+    Lista todos os agendamentos (admin)
     """
     try:
-        agendamentos = Agendamento.objects.all().order_by('-data_hora')
-        serializer = AgendamentoSerializer(agendamentos, many=True)
-        return Response(serializer.data)
+        agendamentos = Agendamento.objects.select_related(
+            'servico', 'animal', 'cliente'
+        ).order_by('-data_hora')
+        
+        data = []
+        for agendamento in agendamentos:
+            data.append({
+                'id': agendamento.id,
+                'data_hora': agendamento.data_hora.isoformat(),
+                'servico': agendamento.servico.nome,
+                'preco': float(agendamento.servico.preco),
+                'pet_nome': agendamento.animal.nome,
+                'pet_especie': agendamento.animal.especie,
+                'cliente': agendamento.cliente.nome,
+                'observacoes': agendamento.observacoes or '',
+                'status': agendamento.status
+            })
+        
+        return Response(data)
     except Exception as e:
         return Response({
             'error': 'Erro ao buscar agendamentos',
+            'detail': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def agendamentos_recentes(request):
+    """
+    Retorna agendamentos recentes para o dashboard
+    """
+    try:
+        agendamentos = Agendamento.objects.select_related(
+            'servico', 'animal', 'cliente'
+        ).order_by('-data_hora')[:10]
+        
+        data = []
+        for agendamento in agendamentos:
+            data.append({
+                'id': agendamento.id,
+                'data_hora': agendamento.data_hora.isoformat(),
+                'servico': agendamento.servico.nome,
+                'preco': float(agendamento.servico.preco),
+                'pet_nome': agendamento.animal.nome,
+                'pet_especie': agendamento.animal.especie,
+                'cliente': agendamento.cliente.nome,
+                'observacoes': agendamento.observacoes or '',
+                'status': agendamento.status
+            })
+        
+        return Response(data)
+        
+    except Exception as e:
+        return Response({
+            'error': 'Erro ao buscar agendamentos recentes',
             'detail': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -146,8 +156,7 @@ def criar_agendamento(request):
         
         # Verificar se já existe agendamento no mesmo horário
         agendamento_existente = Agendamento.objects.filter(
-            data_hora=data_hora,
-            responsavel=data.get('responsavel')
+            data_hora=data_hora
         ).exists()
         
         if agendamento_existente:
@@ -171,7 +180,7 @@ def criar_agendamento(request):
 @permission_classes([permissions.IsAuthenticated])
 def confirmar_agendamento(request, agendamento_id):
     """
-    Confirma um agendamento (admin/profissional)
+    Confirma um agendamento (admin)
     """
     try:
         agendamento = Agendamento.objects.get(id=agendamento_id)
@@ -196,8 +205,8 @@ def cancelar_agendamento(request, agendamento_id):
     try:
         agendamento = Agendamento.objects.get(id=agendamento_id)
         
-        # Verificar se o usuário pode cancelar (cliente ou admin/profissional)
-        if request.user != agendamento.cliente and request.user.tipo not in ['admin', 'profissional']:
+        # Verificar se o usuário pode cancelar (cliente ou admin)
+        if request.user != agendamento.cliente and request.user.tipo != 'admin':
             return Response({
                 'error': 'Sem permissão para cancelar este agendamento'
             }, status=status.HTTP_403_FORBIDDEN)
@@ -227,7 +236,7 @@ def get_agendamentos_admin(request):
     """Listar todos os agendamentos para admin"""
     try:
         agendamentos = Agendamento.objects.select_related(
-            'cliente', 'animal', 'servico', 'responsavel'
+            'cliente', 'animal', 'servico'
         ).order_by('-data_hora')
         
         data = []
@@ -240,11 +249,9 @@ def get_agendamentos_admin(request):
                 'animal_nome': agendamento.animal.nome,
                 'servico_id': agendamento.servico.id,
                 'servico_nome': agendamento.servico.nome,
-                'responsavel_id': agendamento.responsavel.id if agendamento.responsavel else None,
-                'responsavel_nome': agendamento.responsavel.nome if agendamento.responsavel else None,
                 'data_hora': agendamento.data_hora,
                 'observacoes': agendamento.observacoes,
-                'status': 'confirmado'  # Status padrão
+                'status': agendamento.status
             })
         return Response(data)
     except Exception as e:
@@ -267,17 +274,13 @@ def create_agendamento_admin(request):
         cliente = Usuario.objects.get(id=data['cliente_id'], tipo='cliente')
         animal = Animal.objects.get(id=data['animal_id'])
         servico = Servico.objects.get(id=data['servico_id'])
-        responsavel = None
-        if data.get('responsavel_id'):
-            responsavel = Usuario.objects.get(id=data['responsavel_id'], tipo='profissional')
         
         # Criar agendamento
         agendamento = Agendamento.objects.create(
-            empresa=empresa,  # Adicionando empresa
+            empresa=empresa,
             cliente=cliente,
             animal=animal,
             servico=servico,
-            responsavel=responsavel,
             data_hora=data['data_hora'],
             observacoes=data.get('observacoes', '')
         )
@@ -310,6 +313,7 @@ def update_agendamento_admin(request, agendamento_id):
         # Atualizar campos básicos
         agendamento.data_hora = data.get('data_hora', agendamento.data_hora)
         agendamento.observacoes = data.get('observacoes', agendamento.observacoes)
+        agendamento.status = data.get('status', agendamento.status)
         
         # Atualizar relacionamentos se fornecidos
         if 'cliente_id' in data:
@@ -323,12 +327,6 @@ def update_agendamento_admin(request, agendamento_id):
         if 'servico_id' in data:
             servico = Servico.objects.get(id=data['servico_id'])
             agendamento.servico = servico
-        
-        if 'responsavel_id' in data:
-            responsavel = None
-            if data['responsavel_id']:
-                responsavel = Usuario.objects.get(id=data['responsavel_id'], tipo='profissional')
-            agendamento.responsavel = responsavel
         
         agendamento.save()
         
@@ -354,9 +352,9 @@ def update_agendamento_status_admin(request, agendamento_id):
         agendamento = Agendamento.objects.get(id=agendamento_id)
         data = request.data
         
-        # Por enquanto, vamos apenas simular o status
-        # Em um sistema real, você teria um campo status no modelo
         status = data.get('status', 'confirmado')
+        agendamento.status = status
+        agendamento.save()
         
         return Response({
             'message': f'Status do agendamento atualizado para {status}',
@@ -429,26 +427,6 @@ def get_agendamento_stats_admin(request):
 
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
-@require_permission('usuarios', 'read')
-def get_responsaveis_admin(request):
-    """Buscar responsáveis (profissionais) para admin"""
-    try:
-        responsaveis = Usuario.objects.filter(tipo='profissional').order_by('nome')
-        data = []
-        for responsavel in responsaveis:
-            data.append({
-                'id': responsavel.id,
-                'nome': responsavel.nome,
-                'email': responsavel.email,
-                'especialidade': responsavel.especialidade
-            })
-        return Response(data)
-    except Exception as e:
-        return Response({'error': str(e)}, status=500)
-
-
-@api_view(['GET'])
-@permission_classes([permissions.IsAuthenticated])
 @require_permission('servicos', 'read')
 def get_servicos_admin(request):
     """Buscar serviços para admin"""
@@ -471,11 +449,10 @@ def get_servicos_admin(request):
 @permission_classes([permissions.IsAuthenticated])
 def horarios_disponiveis(request):
     """
-    Busca horários disponíveis para uma data e profissional
+    Busca horários disponíveis para uma data
     """
     try:
         data = request.GET.get('data')
-        profissional = request.GET.get('profissional', '')
         
         if not data:
             return Response({
@@ -485,19 +462,26 @@ def horarios_disponiveis(request):
         # Converter data
         data_obj = datetime.strptime(data, '%Y-%m-%d').date()
         
-        # Horários padrão disponíveis (8h às 18h, intervalos de 1h)
-        horarios_padrao = [
-            '08:00', '09:00', '10:00', '11:00', 
-            '14:00', '15:00', '16:00', '17:00'
-        ]
+        # Verificar se é fim de semana
+        weekday = data_obj.weekday()
+        if weekday == 6:  # Domingo
+            return Response([])  # Domingo fechado
+        
+        # Horários padrão disponíveis
+        if weekday == 5:  # Sábado
+            horarios_padrao = [
+                '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30'
+            ]
+        else:  # Segunda a Sexta
+            horarios_padrao = [
+                '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', 
+                '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30'
+            ]
         
         # Buscar agendamentos existentes para excluir horários ocupados
         agendamentos = Agendamento.objects.filter(
             data_hora__date=data_obj
         )
-        
-        if profissional:
-            agendamentos = agendamentos.filter(responsavel_id=profissional)
         
         # Converter horários ocupados para formato string
         horarios_ocupados = [
@@ -526,7 +510,6 @@ def get_horarios_disponiveis_admin(request):
     """Buscar horários disponíveis para admin"""
     try:
         data = request.GET.get('data')
-        profissional = request.GET.get('profissional', '')
         
         if not data:
             return Response({
@@ -536,19 +519,26 @@ def get_horarios_disponiveis_admin(request):
         # Converter data
         data_obj = datetime.strptime(data, '%Y-%m-%d').date()
         
-        # Horários padrão disponíveis (8h às 18h, intervalos de 1h)
-        horarios_padrao = [
-            '08:00', '09:00', '10:00', '11:00', 
-            '14:00', '15:00', '16:00', '17:00'
-        ]
+        # Verificar se é fim de semana
+        weekday = data_obj.weekday()
+        if weekday == 6:  # Domingo
+            return Response([])  # Domingo fechado
+        
+        # Horários padrão disponíveis
+        if weekday == 5:  # Sábado
+            horarios_padrao = [
+                '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30'
+            ]
+        else:  # Segunda a Sexta
+            horarios_padrao = [
+                '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', 
+                '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30'
+            ]
         
         # Buscar agendamentos existentes para excluir horários ocupados
         agendamentos = Agendamento.objects.filter(
             data_hora__date=data_obj
         )
-        
-        if profissional:
-            agendamentos = agendamentos.filter(responsavel_id=profissional)
         
         # Converter horários ocupados para formato string
         horarios_ocupados = [
@@ -568,79 +558,3 @@ def get_horarios_disponiveis_admin(request):
             'error': 'Erro ao buscar horários disponíveis',
             'detail': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-@api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated])
-@require_permission('agendamentos', 'create')
-def create_horario_disponivel_admin(request):
-    """Criar horário disponível para admin"""
-    try:
-        data = request.data
-        
-        # Validar campos obrigatórios
-        if 'data' not in data:
-            return Response({'error': 'Campo "data" é obrigatório'}, status=400)
-        if 'hora_inicio' not in data:
-            return Response({'error': 'Campo "hora_inicio" é obrigatório'}, status=400)
-        if 'hora_fim' not in data:
-            return Response({'error': 'Campo "hora_fim" é obrigatório'}, status=400)
-        
-        # Usar empresa com ID 1 fixo
-        from core.models import Empresa
-        empresa = Empresa.objects.get(id=1)
-        
-        # Converter data e hora
-        data_obj = datetime.strptime(data['data'], '%Y-%m-%d').date()
-        hora_inicio = datetime.strptime(data['hora_inicio'], '%H:%M').time()
-        hora_fim = datetime.strptime(data['hora_fim'], '%H:%M').time()
-        
-        # Buscar serviço e responsável (opcionais)
-        servico = None
-        responsavel = None
-        
-        if 'servico_id' in data and data['servico_id']:
-            try:
-                servico = Servico.objects.get(id=data['servico_id'])
-            except Servico.DoesNotExist:
-                return Response({'error': 'Serviço não encontrado'}, status=404)
-        
-        if 'responsavel_id' in data and data['responsavel_id']:
-            try:
-                responsavel = Usuario.objects.get(id=data['responsavel_id'], tipo='profissional')
-            except Usuario.DoesNotExist:
-                return Response({'error': 'Responsável não encontrado'}, status=404)
-        
-        disponibilidade = DisponibilidadeAgenda.objects.create(
-            empresa=empresa,
-            data=data_obj,
-            hora_inicio=hora_inicio,
-            hora_fim=hora_fim,
-            servico=servico,
-            responsavel=responsavel
-        )
-        
-        return Response({
-            'id': disponibilidade.id,
-            'message': 'Horário disponível criado com sucesso'
-        })
-    except Empresa.DoesNotExist:
-        return Response({'error': 'Empresa não encontrada'}, status=404)
-    except Exception as e:
-        return Response({'error': str(e)}, status=400)
-
-
-@api_view(['DELETE'])
-@permission_classes([permissions.IsAuthenticated])
-@require_permission('agendamentos', 'delete')
-def delete_horario_disponivel_admin(request, disponibilidade_id):
-    """Excluir horário disponível para admin"""
-    try:
-        disponibilidade = DisponibilidadeAgenda.objects.get(id=disponibilidade_id)
-        disponibilidade.delete()
-        
-        return Response({'message': 'Horário disponível excluído com sucesso'})
-    except DisponibilidadeAgenda.DoesNotExist:
-        return Response({'error': 'Horário disponível não encontrado'}, status=404)
-    except Exception as e:
-        return Response({'error': str(e)}, status=400)

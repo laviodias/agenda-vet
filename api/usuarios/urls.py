@@ -11,6 +11,5 @@ urlpatterns = [
     path('auth/logout/', views.logout, name='logout'),
     path('auth/me/', views.perfil_usuario, name='auth_me'),  # Endpoint para dados do usuário logado
     path('perfil/', views.perfil_usuario, name='perfil_usuario'),
-    path('profissionais/', views.listar_profissionais, name='listar_profissionais'),
     path('', include(router.urls)),
 ] 

@@ -18,58 +18,20 @@
 
     <!-- Form -->
     <form v-else @submit.prevent="handleSubmit" class="agendamento-form box">
-      <div class="field">
-        <label for="data" class="label">Data</label>
-        <div class="control">
-          <input 
-            type="date" 
-            id="data"
-            class="input" 
-            v-model="agendamento.data"
-            :min="today"
-            @change="carregarProfissionaisDisponiveis"
-            required
-          />
-        </div>
-      </div>
-
-      <div class="field">
-        <label for="hora" class="label">Horário</label>
-        <div class="control">
-          <input 
-            type="time" 
-            id="hora"
-            class="input" 
-            v-model="agendamento.hora"
-            @change="filtrarProfissionaisPorHorario"
-            required
-          />
-        </div>
-      </div>
       
+      <!-- Calendário Semanal -->
       <div class="field">
-        <label for="profissional" class="label">Profissional</label>
-        <div class="control">
-          <div class="select is-fullwidth is-light">
-            <select id="profissional" v-model="agendamento.profissional" required>
-              <option value="">Selecione um profissional</option>
-              <option 
-                v-for="profissional in profissionaisDisponiveis" 
-                :key="profissional.id" 
-                :value="profissional.id"
-              >
-                {{ profissional.nome }} ({{ profissional.especialidade || 'Sem especialidade' }})
-                - {{ profissional.hora_inicio }} às {{ profissional.hora_fim }}
-              </option>
-            </select>
-          </div>
-        </div>
+        <label class="label">Selecione Data e Horário</label>
+        <CalendarioSemanal 
+          v-model="agendamento.dataHora"
+          @update:modelValue="handleDataHoraChange"
+        />
       </div>
       
       <div class="field">
         <label for="servico" class="label">Serviço</label>
         <div class="control">
-          <div class="select is-fullwidth is-light">
+          <div class="select is-fullwidth">
             <select id="servico" v-model="agendamento.servico" required>
               <option value="">Selecione um serviço</option>
               <option 
@@ -87,7 +49,7 @@
       <div class="field">
         <label for="pet" class="label">Pet</label>
         <div class="control">
-          <div class="select is-fullwidth is-light">
+          <div class="select is-fullwidth">
             <select id="pet" v-model="agendamento.pet" required>
               <option value="">Selecione um pet</option>
               <option 
@@ -137,8 +99,9 @@
 </template>
 
 <script setup>
-import { reactive, onMounted, ref, computed } from 'vue';
+import { reactive, onMounted, ref } from 'vue';
 import authService from '../services/authService.js';
+import CalendarioSemanal from './CalendarioSemanal.vue';
 
 // Props
 const props = defineProps({
@@ -160,157 +123,99 @@ const loading = ref(false)
 const error = ref(null)
 const submitting = ref(false)
 const servicos = ref([])
-const profissionaisDisponiveis = ref([])
 
 const agendamento = reactive({
-  data: '',
-  hora: '',
-  profissional: '',
+  dataHora: { date: '', time: '' },
   servico: '',
   pet: '',
   observacoes: ''
 });
 
-// Computed
-const today = computed(() => {
-  const today = new Date()
-  return today.toISOString().split('T')[0]
-})
+// Funções
+const handleDataHoraChange = (dataHora) => {
+  agendamento.dataHora = dataHora;
+};
 
-const diaSemana = computed(() => {
-  if (!agendamento.data) return null
-  const date = new Date(agendamento.data)
-  return date.getDay() // 0 = Domingo, 1 = Segunda, etc.
-})
+const carregarServicos = async () => {
+  try {
+    const servicosData = await authService.getServicos();
+    servicos.value = servicosData;
+  } catch (err) {
+    console.error('Erro ao carregar serviços:', err);
+    error.value = 'Erro ao carregar serviços. Tente novamente.';
+  }
+};
+
+const handleSubmit = async () => {
+  if (!agendamento.dataHora.date || !agendamento.dataHora.time) {
+    error.value = 'Por favor, selecione uma data e horário.';
+    return;
+  }
+
+  if (!agendamento.servico) {
+    error.value = 'Por favor, selecione um serviço.';
+    return;
+  }
+
+  if (!agendamento.pet) {
+    error.value = 'Por favor, selecione um pet.';
+    return;
+  }
+
+  try {
+    submitting.value = true;
+    error.value = null;
+
+    // Combinar data e hora
+    const dataHora = `${agendamento.dataHora.date}T${agendamento.dataHora.time}:00`;
+
+    const agendamentoData = {
+      data_hora: dataHora,
+      servico: agendamento.servico,
+      animal: agendamento.pet,
+      observacoes: agendamento.observacoes
+    };
+
+    const resultado = await authService.createAgendamento(agendamentoData);
+
+    // Limpar formulário
+    agendamento.dataHora = { date: '', time: '' };
+    agendamento.servico = '';
+    agendamento.pet = '';
+    agendamento.observacoes = '';
+
+    // Emitir evento de sucesso
+    emit('agendamento-criado', resultado);
+
+  } catch (err) {
+    console.error('Erro ao criar agendamento:', err);
+    error.value = 'Erro ao criar agendamento. Tente novamente.';
+  } finally {
+    submitting.value = false;
+  }
+};
+
+const handleClose = () => {
+  emit('close');
+};
 
 // Carregar dados na montagem
 onMounted(async () => {
-  await loadData()
-  
-  // Se um pet foi selecionado, definir como padrão
-  if (props.petSelecionado) {
-    agendamento.pet = props.petSelecionado.id;
+  loading.value = true;
+  try {
+    await carregarServicos();
+  } catch (err) {
+    console.error('Erro ao carregar dados:', err);
+    error.value = 'Erro ao carregar dados. Tente novamente.';
+  } finally {
+    loading.value = false;
   }
 });
-
-// Função para carregar dados
-const loadData = async () => {
-  try {
-    loading.value = true
-    error.value = null
-    
-    // Carregar serviços
-    const servicosData = await authService.getServicos()
-    servicos.value = Array.isArray(servicosData) ? servicosData : []
-    
-  } catch (err) {
-    console.error('Erro ao carregar dados:', err)
-    error.value = 'Erro ao carregar dados. Tente novamente.'
-  } finally {
-    loading.value = false
-  }
-}
-
-// Carregar profissionais disponíveis para o dia selecionado
-const carregarProfissionaisDisponiveis = async () => {
-  if (!agendamento.data || !diaSemana.value) return
-  
-  try {
-    const response = await authService.getProfissionaisDisponiveis(diaSemana.value)
-    profissionaisDisponiveis.value = response.data || []
-    agendamento.profissional = '' // Reset seleção
-  } catch (err) {
-    console.error('Erro ao carregar profissionais disponíveis:', err)
-    error.value = 'Erro ao carregar profissionais disponíveis'
-  }
-}
-
-// Filtrar profissionais por horário
-const filtrarProfissionaisPorHorario = () => {
-  if (!agendamento.hora) return
-  
-  const horaSelecionada = agendamento.hora
-  profissionaisDisponiveis.value = profissionaisDisponiveis.value.filter(prof => {
-    return horaSelecionada >= prof.hora_inicio && horaSelecionada <= prof.hora_fim
-  })
-  
-  agendamento.profissional = '' // Reset seleção
-}
-
-async function handleSubmit() {
-  try {
-    // Validar dados obrigatórios
-    if (!agendamento.data) {
-      error.value = 'Selecione uma data'
-      return
-    }
-    
-    if (!agendamento.hora) {
-      error.value = 'Selecione um horário'
-      return
-    }
-    
-    if (!agendamento.profissional) {
-      error.value = 'Selecione um profissional'
-      return
-    }
-    
-    if (!agendamento.servico) {
-      error.value = 'Selecione um serviço'
-      return
-    }
-    
-    if (!agendamento.pet) {
-      error.value = 'Selecione um pet'
-      return
-    }
-    
-    submitting.value = true
-    error.value = null
-    
-    // Criar data/hora completa
-    const dataHora = `${agendamento.data}T${agendamento.hora}:00`
-    
-    const agendamentoData = {
-      data_hora: dataHora,
-      profissional: agendamento.profissional,
-      servico: agendamento.servico,
-      pet: agendamento.pet,
-      observacoes: agendamento.observacoes
-    }
-    
-    const response = await authService.createAgendamento(agendamentoData)
-    
-    // Emitir evento de sucesso
-    emit('agendamento-criado', response.data)
-    
-    // Limpar formulário
-    agendamento.data = ''
-    agendamento.hora = ''
-    agendamento.profissional = ''
-    agendamento.servico = ''
-    agendamento.pet = ''
-    agendamento.observacoes = ''
-    
-    // Fechar modal
-    handleClose()
-    
-  } catch (err) {
-    console.error('Erro ao criar agendamento:', err)
-    error.value = err.response?.data?.error || 'Erro ao criar agendamento. Tente novamente.'
-  } finally {
-    submitting.value = false
-  }
-}
-
-function handleClose() {
-  emit('close')
-}
 </script>
 
 <style scoped>
 .agendamento-container {
-  max-width: 600px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
 }
@@ -390,25 +295,22 @@ function handleClose() {
   border: 1px solid #f5c6cb;
 }
 
+.notification.is-info {
+  background: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+}
+
 .delete {
   background: none;
   border: none;
-  font-size: 18px;
+  font-size: 1.5rem;
   cursor: pointer;
   float: right;
-  color: #721c24;
+  color: inherit;
 }
 
-.icon {
-  margin-right: 0.5rem;
-}
-
-.buttons {
-  display: flex;
-  gap: 10px;
-}
-
-.buttons .button {
-  flex: 1;
+.delete:hover {
+  opacity: 0.7;
 }
 </style> 

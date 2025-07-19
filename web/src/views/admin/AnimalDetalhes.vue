@@ -94,7 +94,6 @@
               
               <div class="agendamento-info">
                 <p><strong>Data:</strong> {{ formatDateTime(agendamento.data_hora) }}</p>
-                <p><strong>Responsável:</strong> {{ agendamento.responsavel_nome || 'Não atribuído' }}</p>
                 <p v-if="agendamento.observacoes"><strong>Observações:</strong> {{ agendamento.observacoes }}</p>
               </div>
             </div>

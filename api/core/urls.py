@@ -8,6 +8,8 @@ urlpatterns = [
     path('brand/', views.brand_config_list, name='brand_config_list'),
     path('brand/<int:pk>/', views.brand_config_detail, name='brand_config_detail'),
     path('brand/<int:pk>/ativar/', views.activate_brand_config, name='activate_brand_config'),
+    path('clinica/info/', views.info_clinica, name='info_clinica'),
+    path('horarios-funcionamento/', views.horarios_funcionamento, name='horarios_funcionamento'),
     
     # URLs para roles e permissões
     path('admin/roles/', views.get_roles, name='get_roles'),  # GET - listar roles

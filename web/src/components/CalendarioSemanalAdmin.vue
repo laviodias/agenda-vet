@@ -166,24 +166,19 @@ const isWeekend = (date) => {
                 <strong>{{ agendamento.servico_nome }}</strong>
               </div>
               
-              <div class="appointment-professional">
-                <i class="fas fa-user-md"></i>
-                {{ agendamento.responsavel_nome || 'Não atribuído' }}
-              </div>
-              
               <div class="appointment-animal">
                 <i class="fas fa-paw"></i>
-                {{ agendamento.animal_nome }} ({{ agendamento.animal_especie }})
+                {{ agendamento.pet_nome }} ({{ agendamento.pet_especie }})
               </div>
               
               <div class="appointment-owner">
                 <i class="fas fa-user"></i>
-                {{ agendamento.cliente_nome }}
+                {{ agendamento.cliente }}
               </div>
               
               <div class="appointment-price">
                 <i class="fas fa-dollar-sign"></i>
-                {{ formatPrice(agendamento.servico_preco) }}
+                {{ formatPrice(agendamento.preco) }}
               </div>
               
               <div v-if="agendamento.observacoes" class="appointment-notes">

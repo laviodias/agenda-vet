@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import AdminWeeklyCalendar from '../../components/AdminWeeklyCalendar.vue'
+import CalendarioSemanalAdmin from '../../components/CalendarioSemanalAdmin.vue'
+import authService from '../../services/authService.js'
 import adminService from '../../services/adminService.js'
 
 // Dados do dashboard
@@ -81,7 +82,7 @@ const carregarDados = async () => {
 
 const confirmarAgendamento = async (agendamentoId) => {
   try {
-    await adminService.confirmarAgendamento(agendamentoId)
+    await authService.confirmarAgendamento(agendamentoId)
     // Recarregar dados após confirmação
     await carregarDados()
   } catch (error) {
@@ -91,7 +92,7 @@ const confirmarAgendamento = async (agendamentoId) => {
 
 const cancelarAgendamento = async (agendamentoId) => {
   try {
-    await adminService.cancelarAgendamento(agendamentoId)
+    await authService.cancelarAgendamento(agendamentoId)
     // Recarregar dados após cancelamento
     await carregarDados()
   } catch (error) {
@@ -199,7 +200,7 @@ onMounted(() => {
           <p class="mt-3">Carregando agenda...</p>
         </div>
         
-        <AdminWeeklyCalendar v-else :agendamentos="agendamentos" />
+        <CalendarioSemanalAdmin v-else :agendamentos="agendamentos" />
       </div>
 
       <!-- Agendamentos Recentes -->
@@ -232,10 +233,6 @@ onMounted(() => {
               </div>
               
               <div class="appointment-details">
-                <span class="professional">
-                  <i class="fas fa-user-md"></i>
-                  {{ agendamento.profissional }}
-                </span>
                 <span class="animal">
                   <i class="fas fa-paw"></i>
                   {{ agendamento.pet_nome }} 

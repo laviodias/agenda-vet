@@ -108,48 +108,6 @@ class AdminService {
     }
   }
 
-  // ===== PROFISSIONAIS =====
-  
-  // Listar profissionais
-  async getProfissionais() {
-    try {
-      return await apiService.get('/usuarios/profissionais/')
-    } catch (error) {
-      console.error('Erro ao buscar profissionais:', error)
-      throw error
-    }
-  }
-
-  // Criar profissional
-  async createProfissional(profissionalData) {
-    try {
-      return await apiService.post('/usuarios/criar/', profissionalData)
-    } catch (error) {
-      console.error('Erro ao criar profissional:', error)
-      throw error
-    }
-  }
-
-  // Atualizar profissional
-  async updateProfissional(profissionalId, profissionalData) {
-    try {
-      return await apiService.put(`/usuarios/${profissionalId}/`, profissionalData)
-    } catch (error) {
-      console.error('Erro ao atualizar profissional:', error)
-      throw error
-    }
-  }
-
-  // Deletar profissional
-  async deleteProfissional(profissionalId) {
-    try {
-      return await apiService.delete(`/usuarios/${profissionalId}/deletar/`)
-    } catch (error) {
-      console.error('Erro ao deletar profissional:', error)
-      throw error
-    }
-  }
-
   // ===== RELATÓRIOS =====
   
   // Relatório de agendamentos por período
@@ -566,86 +524,12 @@ class AdminService {
     }
   }
 
-  // Buscar responsáveis (profissionais)
-  async getResponsaveis() {
-    try {
-      return await apiService.get('/admin/responsaveis/')
-    } catch (error) {
-      console.error('Erro ao buscar responsáveis:', error)
-      throw error
-    }
-  }
-
   // Buscar serviços
   async getServicos() {
     try {
       return await apiService.get('/admin/servicos/')
     } catch (error) {
       console.error('Erro ao buscar serviços:', error)
-      throw error
-    }
-  }
-
-  // ===== DISPONIBILIDADE DOS PROFISSIONAIS =====
-  
-  // Buscar disponibilidades de um profissional
-  async getDisponibilidadesProfissional(profissionalId) {
-    try {
-      return await apiService.get(`/admin/profissionais/${profissionalId}/disponibilidades/`)
-    } catch (error) {
-      console.error('Erro ao buscar disponibilidades do profissional:', error)
-      throw error
-    }
-  }
-
-  // Criar disponibilidade para um profissional
-  async createDisponibilidadeProfissional(data) {
-    try {
-      return await apiService.post('/admin/disponibilidades/create/', data)
-    } catch (error) {
-      console.error('Erro ao criar disponibilidade:', error)
-      throw error
-    }
-  }
-
-  // Atualizar disponibilidade de um profissional
-  async updateDisponibilidadeProfissional(id, data) {
-    try {
-      return await apiService.put(`/admin/disponibilidades/${id}/`, data)
-    } catch (error) {
-      console.error('Erro ao atualizar disponibilidade:', error)
-      throw error
-    }
-  }
-
-  // Deletar disponibilidade de um profissional
-  async deleteDisponibilidadeProfissional(id) {
-    try {
-      return await apiService.delete(`/admin/disponibilidades/${id}/delete/`)
-    } catch (error) {
-      console.error('Erro ao deletar disponibilidade:', error)
-      throw error
-    }
-  }
-
-  // Atualizar múltiplas disponibilidades de um profissional
-  async bulkUpdateDisponibilidades(profissionalId, disponibilidades) {
-    try {
-      return await apiService.post(`/admin/profissionais/${profissionalId}/disponibilidades/bulk/`, {
-        disponibilidades: disponibilidades
-      })
-    } catch (error) {
-      console.error('Erro ao atualizar disponibilidades em lote:', error)
-      throw error
-    }
-  }
-
-  // Buscar profissionais disponíveis para um dia específico
-  async getProfissionaisDisponiveis(diaSemana) {
-    try {
-      return await apiService.get(`/admin/profissionais/disponiveis/?dia_semana=${diaSemana}`)
-    } catch (error) {
-      console.error('Erro ao buscar profissionais disponíveis:', error)
       throw error
     }
   }

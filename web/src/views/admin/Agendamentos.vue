@@ -53,13 +53,6 @@
             <option value="futuro">Futuros</option>
           </select>
           
-          <select v-model="responsavelFilter" @change="filterAgendamentos">
-            <option value="">Todos os responsáveis</option>
-            <option v-for="responsavel in responsaveis" :key="responsavel.id" :value="responsavel.id">
-              {{ responsavel.nome }}
-            </option>
-          </select>
-          
           <select v-model="sortBy" @change="filterAgendamentos">
             <option value="data_hora">Ordenar por Data</option>
             <option value="cliente">Ordenar por Cliente</option>
@@ -124,10 +117,6 @@
               
               <div class="detail-row">
                 <div class="detail-item">
-                  <i class="fas fa-user-md"></i>
-                  <strong>Responsável:</strong> {{ agendamento.responsavel_nome || 'Não atribuído' }}
-                </div>
-                <div class="detail-item">
                   <i class="fas fa-calendar"></i>
                   <strong>Data:</strong> {{ formatDate(agendamento.data_hora) }}
                 </div>
@@ -189,16 +178,6 @@
               <option value="">Selecione um serviço</option>
               <option v-for="servico in servicos" :key="servico.id" :value="servico.id">
                 {{ servico.nome }}
-              </option>
-            </select>
-          </div>
-          
-          <div class="form-group">
-            <label>Responsável:</label>
-            <select v-model="newAgendamento.responsavel_id">
-              <option value="">Selecione um responsável</option>
-              <option v-for="responsavel in responsaveis" :key="responsavel.id" :value="responsavel.id">
-                {{ responsavel.nome }}
               </option>
             </select>
           </div>
@@ -269,16 +248,6 @@
             </select>
           </div>
           
-          <div class="form-group">
-            <label>Responsável:</label>
-            <select v-model="editingAgendamento.responsavel_id">
-              <option value="">Selecione um responsável</option>
-              <option v-for="responsavel in responsaveis" :key="responsavel.id" :value="responsavel.id">
-                {{ responsavel.nome }}
-              </option>
-            </select>
-          </div>
-          
           <div class="form-row">
             <div class="form-group">
               <label>Data:</label>
@@ -330,7 +299,6 @@ export default {
       filteredAgendamentos: [],
       clientes: [],
       servicos: [],
-      responsaveis: [],
       clienteAnimais: [],
       stats: {
         totalAgendamentos: 0,
@@ -342,7 +310,6 @@ export default {
       searchTerm: '',
       statusFilter: '',
       periodoFilter: '',
-      responsavelFilter: '',
       sortBy: 'data_hora',
       showCreateAgendamentoModal: false,
       showEditAgendamentoModal: false,
@@ -350,7 +317,6 @@ export default {
         cliente_id: '',
         animal_id: '',
         servico_id: '',
-        responsavel_id: '',
         data: '',
         hora: '',
         observacoes: ''
@@ -360,7 +326,6 @@ export default {
         cliente_id: '',
         animal_id: '',
         servico_id: '',
-        responsavel_id: '',
         data: '',
         hora: '',
         status: 'confirmado',
@@ -379,7 +344,6 @@ export default {
           this.loadAgendamentos(),
           this.loadClientes(),
           this.loadServicos(),
-          this.loadResponsaveis(),
           this.loadStats()
         ])
       } catch (error) {
@@ -411,14 +375,6 @@ export default {
         this.servicos = Array.isArray(response) ? response : []
       } catch (error) {
         console.error('Erro ao carregar serviços:', error)
-      }
-    },
-    async loadResponsaveis() {
-      try {
-        const response = await adminService.getResponsaveis()
-        this.responsaveis = Array.isArray(response) ? response : []
-      } catch (error) {
-        console.error('Erro ao carregar responsáveis:', error)
       }
     },
     async loadStats() {
@@ -496,11 +452,6 @@ export default {
         })
       }
       
-      // Filtro por responsável
-      if (this.responsavelFilter) {
-        filtered = filtered.filter(agendamento => agendamento.responsavel_id == this.responsavelFilter)
-      }
-      
       // Ordenação
       filtered.sort((a, b) => {
         switch (this.sortBy) {
@@ -544,7 +495,6 @@ export default {
         cliente_id: agendamento.cliente_id,
         animal_id: agendamento.animal_id,
         servico_id: agendamento.servico_id,
-        responsavel_id: agendamento.responsavel_id,
         data: dataHora.toISOString().split('T')[0],
         hora: dataHora.toTimeString().slice(0, 5),
         status: agendamento.status,
@@ -636,7 +586,6 @@ export default {
         cliente_id: '',
         animal_id: '',
         servico_id: '',
-        responsavel_id: '',
         data: '',
         hora: '',
         observacoes: ''
@@ -649,7 +598,6 @@ export default {
         cliente_id: '',
         animal_id: '',
         servico_id: '',
-        responsavel_id: '',
         data: '',
         hora: '',
         status: 'confirmado',

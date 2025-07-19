@@ -633,12 +633,6 @@ const handleAgendamentoCriado = async (novoAgendamento) => {
             </div>
           </div>
           <div class="field">
-            <label class="label">Profissional</label>
-            <div class="control">
-              <input class="input" type="text" :value="agendamentoSelecionado.responsavel_nome || agendamentoSelecionado.responsavel || 'Não atribuído'" readonly>
-            </div>
-          </div>
-          <div class="field">
             <label class="label">Status</label>
             <div class="control">
               <span class="tag" :class="getStatusColor(agendamentoSelecionado.status)">

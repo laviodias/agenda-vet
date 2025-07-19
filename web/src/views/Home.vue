@@ -9,12 +9,10 @@ const router = useRouter()
 const { brandConfig } = useBrand()
 
 const servicos = ref([])
-const profissionais = ref([])
 const horariosFuncionamento = ref({})
 const infoClinica = ref(null)
 
-const loading = ref(true)
-const loadingProfissionais = ref(true)
+const loadingServicos = ref(true)
 const loadingHorarios = ref(true)
 const loadingInfo = ref(true)
 
@@ -31,26 +29,30 @@ const formatarDia = (dia) => {
   return dias[dia] || dia
 }
 
+const formatarMoeda = (valor) => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  }).format(valor)
+}
+
 const carregarDados = async () => {
   try {
     // Carregar dados em paralelo
-    const [servicosData, profissionaisData, horariosData, infoData] = await Promise.all([
+    const [servicosData, horariosData, infoData] = await Promise.all([
       publicService.getServicos(),
-      publicService.getProfissionais(),
       publicService.getHorariosFuncionamento(),
       publicService.getInfoClinica()
     ])
 
     servicos.value = servicosData
-    profissionais.value = profissionaisData
     horariosFuncionamento.value = horariosData
     infoClinica.value = infoData
 
   } catch (error) {
     console.error('Erro ao carregar dados da página inicial:', error)
   } finally {
-    loading.value = false
-    loadingProfissionais.value = false
+    loadingServicos.value = false
     loadingHorarios.value = false
     loadingInfo.value = false
   }
@@ -118,16 +120,14 @@ const goToAuth = () => {
     </section>
 
     <!-- Serviços Section -->
-    <section id="servicos" class="section">
+    <section class="section">
       <div class="container">
-        <div class="has-text-centered mb-6">
-          <h2 class="title is-3">Nossos Serviços</h2>
-          <p class="subtitle is-5 has-text-grey">
-            Oferecemos uma ampla gama de serviços veterinários para cuidar do seu pet
-          </p>
-        </div>
+        <h2 class="title is-3 has-text-centered">Nossos Serviços</h2>
+        <p class="subtitle is-5 has-text-grey has-text-centered mb-5">
+          Oferecemos uma ampla gama de serviços veterinários para cuidar do seu pet
+        </p>
 
-        <div v-if="loading" class="has-text-centered">
+        <div v-if="loadingServicos" class="has-text-centered">
           <div class="loader"></div>
           <p class="mt-3">Carregando serviços...</p>
         </div>
@@ -139,70 +139,15 @@ const goToAuth = () => {
             class="column is-4"
           >
             <div class="card service-card">
-              <div class="card-content">
-                <div class="service-icon has-text-centered mb-4">
-                  <i class="fas fa-stethoscope" style="font-size: 3rem; color: #3273dc;"></i>
-                </div>
-                <h3 class="title is-4 has-text-centered">{{ servico.nome }}</h3>
-                <p class="has-text-grey has-text-centered mb-4">
-                  {{ servico.descricao }}
-                </p>
-                <div class="service-details has-text-centered">
-                  <div class="price">
-                    <span class="has-text-primary has-text-weight-bold">
-                      R$ {{ servico.preco.toFixed(2) }}
-                    </span>
-                  </div>
-                  <div class="duration has-text-grey">
-                    <small>{{ servico.duracao }} minutos</small>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Profissionais Section -->
-    <section class="section has-background-light">
-      <div class="container">
-        <div class="has-text-centered mb-6">
-          <h2 class="title is-3">Nossa Equipe</h2>
-          <p class="subtitle is-5 has-text-grey">
-            Profissionais especializados e dedicados ao cuidado dos seus pets
-          </p>
-        </div>
-
-        <div v-if="loadingProfissionais" class="has-text-centered">
-          <div class="loader"></div>
-          <p class="mt-3">Carregando profissionais...</p>
-        </div>
-
-        <div v-else class="columns is-multiline">
-          <div 
-            v-for="profissional in profissionais" 
-            :key="profissional.id" 
-            class="column is-4"
-          >
-            <div class="card professional-card">
               <div class="card-content has-text-centered">
-                <div class="professional-avatar mb-4">
-                  <figure class="image is-128x128 is-inline-block">
-                    <img 
-                      v-if="profissional.foto" 
-                      :src="profissional.foto" 
-                      :alt="profissional.nome"
-                      class="is-rounded"
-                    >
-                    <div v-else class="avatar-placeholder is-rounded">
-                      <i class="fas fa-user-md" style="font-size: 3rem; color: #ccc;"></i>
-                    </div>
-                  </figure>
+                <div class="service-icon mb-4">
+                  <i class="fas fa-stethoscope" style="font-size: 3rem; color: var(--primary-color, #3273dc);"></i>
                 </div>
-                <h3 class="title is-4">{{ profissional.nome }}</h3>
-                <p class="subtitle is-6 has-text-grey">{{ profissional.especialidade }}</p>
-                <p class="has-text-grey-light is-size-7">CRMV: {{ profissional.crmv }}</p>
+                <h3 class="title is-4">{{ servico.nome }}</h3>
+                <p class="subtitle is-6 has-text-grey">{{ servico.descricao }}</p>
+                <p class="has-text-primary is-size-5 has-text-weight-bold">
+                  {{ formatarMoeda(servico.preco) }}
+                </p>
               </div>
             </div>
           </div>

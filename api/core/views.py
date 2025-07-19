@@ -303,42 +303,6 @@ def dashboard_stats(request):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@api_view(['GET'])
-@permission_classes([permissions.IsAuthenticated])
-@require_role('admin')
-def agendamentos_recentes(request):
-    """
-    Retorna agendamentos recentes para o dashboard
-    """
-    try:
-        agendamentos = Agendamento.objects.select_related(
-            'servico', 'animal', 'cliente', 'responsavel'
-        ).order_by('-data_hora')[:10]
-        
-        data = []
-        for agendamento in agendamentos:
-            data.append({
-                'id': agendamento.id,
-                'data_hora': agendamento.data_hora.isoformat(),
-                'servico': agendamento.servico.nome,
-                'preco': float(agendamento.servico.preco),
-                'pet_nome': agendamento.animal.nome,
-                'pet_especie': agendamento.animal.especie,
-                'cliente': agendamento.cliente.nome,
-                'profissional': agendamento.responsavel.nome if agendamento.responsavel else 'Não definido',
-                'observacoes': agendamento.observacoes or '',
-                'status': 'confirmado'  # Status fixo por enquanto
-            })
-        
-        return Response(data)
-        
-    except Exception as e:
-        return Response({
-            'error': 'Erro ao buscar agendamentos recentes',
-            'detail': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
 class RoleViewSet(viewsets.ModelViewSet):
     """
     ViewSet para gerenciamento de roles
@@ -1274,7 +1238,7 @@ def get_cliente_agendamentos(request, cliente_id):
     try:
         cliente = Usuario.objects.get(id=cliente_id, tipo='cliente')
         agendamentos = Agendamento.objects.filter(cliente=cliente).select_related(
-            'animal', 'servico', 'responsavel'
+            'animal', 'servico'
         ).order_by('-data_hora')[:10]  # Últimos 10 agendamentos
         
         data = []
@@ -1284,7 +1248,6 @@ def get_cliente_agendamentos(request, cliente_id):
                 'animal_nome': agendamento.animal.nome,
                 'servico_nome': agendamento.servico.nome,
                 'data_hora': agendamento.data_hora,
-                'responsavel_nome': agendamento.responsavel.nome if agendamento.responsavel else None,
                 'observacoes': agendamento.observacoes,
                 'status': 'confirmado'  # Status padrão
             })
@@ -1347,8 +1310,8 @@ def get_animal_agendamentos(request, animal_id):
     try:
         animal = Animal.objects.get(id=animal_id)
         agendamentos = Agendamento.objects.filter(animal=animal).select_related(
-            'servico', 'responsavel'
-        ).order_by('-data_hora')[:10]  # Últimos 10 agendamentos
+            'servico'
+        ).order_by('-data_hora')[:10]
         
         data = []
         for agendamento in agendamentos:
@@ -1356,9 +1319,8 @@ def get_animal_agendamentos(request, animal_id):
                 'id': agendamento.id,
                 'servico_nome': agendamento.servico.nome,
                 'data_hora': agendamento.data_hora,
-                'responsavel_nome': agendamento.responsavel.nome if agendamento.responsavel else None,
                 'observacoes': agendamento.observacoes,
-                'status': 'confirmado'  # Status padrão
+                'status': 'confirmado'
             })
         return Response(data)
     except Animal.DoesNotExist:

@@ -2,11 +2,11 @@ from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from datetime import datetime, timedelta, time
-from core.models import Empresa
+from core.models import Empresa, ConfiguracaoBrand, Role, Permission, RolePermission, UserRole
 from servicos.models import Servico
-from usuarios.models import Usuario
 from animais.models import Animal
-from agendamentos.models import DisponibilidadeAgenda, Agendamento
+from agendamentos.models import Agendamento
+from usuarios.models import Usuario
 
 User = get_user_model()
 
@@ -55,7 +55,6 @@ class Command(BaseCommand):
 
         # Atribuir role de admin ao usuário admin
         try:
-            from core.models import Role, UserRole
             admin_role = Role.objects.get(name='admin')
             UserRole.objects.get_or_create(user=admin_user, role=admin_role, defaults={'is_active': True})
             self.stdout.write(self.style.SUCCESS('Role admin atribuído ao usuário admin'))
@@ -290,51 +289,7 @@ class Command(BaseCommand):
                 animais_criados.append(animal)
                 self.stdout.write(f'Animal {animal.nome} já existe')
         
-        # Criar disponibilidades de agenda
-        self.stdout.write('Criando disponibilidades de agenda...')
-        
-        # Verificar se já existem disponibilidades
-        if DisponibilidadeAgenda.objects.exists():
-            self.stdout.write('Disponibilidades já existem, pulando criação...')
-        else:
-            # Criar disponibilidades para os próximos 30 dias
-            data_atual = timezone.now().date()
-            for i in range(30):
-                data = data_atual + timedelta(days=i)
-                
-                # Pular finais de semana
-                if data.weekday() >= 5:  # Sábado = 5, Domingo = 6
-                    continue
-                
-                # Criar disponibilidades para cada profissional e serviço
-                for profissional in profissionais_criados:
-                    for servico in servicos_criados[:4]:  # Apenas os 4 primeiros serviços
-                        # Horários de trabalho: 8h às 18h
-                        hora_inicio = time(8, 0)
-                        hora_fim = time(18, 0)
-                        
-                        # Usar get_or_create com tratamento de exceção para evitar duplicatas
-                        try:
-                            disponibilidade, created = DisponibilidadeAgenda.objects.get_or_create(
-                                empresa=empresa,
-                                data=data,
-                                hora_inicio=hora_inicio,
-                                servico=servico,
-                                responsavel=profissional,
-                                defaults={
-                                    'hora_fim': hora_fim
-                                }
-                            )
-                            
-                            if created:
-                                self.stdout.write(f'Disponibilidade criada: {data} - {profissional.nome} - {servico.nome}')
-                            else:
-                                self.stdout.write(f'Disponibilidade já existe: {data} - {profissional.nome} - {servico.nome}')
-                        except Exception as e:
-                            # Se houver erro de constraint única, apenas ignorar
-                            self.stdout.write(f'Disponibilidade já existe (erro ignorado): {data} - {profissional.nome} - {servico.nome}')
-        
-        # Criar alguns agendamentos de exemplo
+        # Criar agendamentos de exemplo
         self.stdout.write('Criando agendamentos de exemplo...')
         
         # Verificar se já existem agendamentos
@@ -348,35 +303,30 @@ class Command(BaseCommand):
                     'data_hora': data_atual + timedelta(days=1, hours=9),
                     'servico': servicos_criados[0],  # Consulta
                     'animal': animais_criados[0],    # Rex
-                    'responsavel': profissionais_criados[0],  # Dr. João
                     'cliente': clientes_criados[0]  # Cliente Teste
                 },
                 {
                     'data_hora': data_atual + timedelta(days=2, hours=14),
                     'servico': servicos_criados[1],  # Vacinação
                     'animal': animais_criados[1],    # Luna
-                    'responsavel': profissionais_criados[1],  # Dra. Maria
                     'cliente': clientes_criados[1]  # Maria Silva
                 },
                 {
                     'data_hora': data_atual + timedelta(days=3, hours=10),
                     'servico': servicos_criados[2],  # Exame de Sangue
                     'animal': animais_criados[2],    # Thor
-                    'responsavel': profissionais_criados[2],  # Dr. Pedro
                     'cliente': clientes_criados[2]  # Carlos Santos
                 },
                 {
                     'data_hora': data_atual + timedelta(days=4, hours=15),
                     'servico': servicos_criados[3],  # Banho e Tosa
                     'animal': animais_criados[3],    # Mia
-                    'responsavel': profissionais_criados[3],  # Dra. Ana
                     'cliente': clientes_criados[0]  # Cliente Teste
                 },
                 {
                     'data_hora': data_atual + timedelta(days=5, hours=11),
                     'servico': servicos_criados[0],  # Consulta
                     'animal': animais_criados[4],    # Buddy
-                    'responsavel': profissionais_criados[0],  # Dr. João
                     'cliente': clientes_criados[1]  # Maria Silva
                 }
             ]

@@ -75,10 +75,6 @@ const props = defineProps({
   modelValue: {
     type: Object,
     default: () => ({ date: '', time: '' })
-  },
-  profissional: {
-    type: [String, Number],
-    default: ''
   }
 });
 
@@ -91,28 +87,40 @@ const horariosDisponiveis = ref({});
 
 const timeSlots = [
   { value: '08:00', label: '08:00' },
+  { value: '08:30', label: '08:30' },
   { value: '09:00', label: '09:00' },
+  { value: '09:30', label: '09:30' },
   { value: '10:00', label: '10:00' },
+  { value: '10:30', label: '10:30' },
   { value: '11:00', label: '11:00' },
+  { value: '11:30', label: '11:30' },
   { value: '14:00', label: '14:00' },
+  { value: '14:30', label: '14:30' },
   { value: '15:00', label: '15:00' },
+  { value: '15:30', label: '15:30' },
   { value: '16:00', label: '16:00' },
+  { value: '16:30', label: '16:30' },
   { value: '17:00', label: '17:00' },
+  { value: '17:30', label: '17:30' },
 ];
 
 const weekDays = computed(() => {
   const days = [];
   const today = new Date();
   
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 7; i++) {
     const date = new Date(currentWeekStart.value);
     date.setDate(currentWeekStart.value.getDate() + i);
+    
+    // Pular domingo (day 0)
+    if (date.getDay() === 0) continue;
     
     days.push({
       value: date.toISOString().split('T')[0],
       weekday: date.toLocaleDateString('pt-BR', { weekday: 'short' }),
       date: date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-      isToday: date.toDateString() === today.toDateString()
+      isToday: date.toDateString() === today.toDateString(),
+      isWeekend: date.getDay() === 6 // Sábado
     });
   }
   
@@ -122,13 +130,13 @@ const weekDays = computed(() => {
 const weekRange = computed(() => {
   const start = new Date(currentWeekStart.value);
   const end = new Date(currentWeekStart.value);
-  end.setDate(end.getDate() + 4);
+  end.setDate(end.getDate() + 6);
   
   return `${start.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} - ${end.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
 });
 
-// Carregar horários disponíveis quando a semana ou profissional mudar
-watch([currentWeekStart, () => props.profissional], async () => {
+// Carregar horários disponíveis quando a semana mudar
+watch([currentWeekStart], async () => {
   await loadHorariosDisponiveis();
 });
 
@@ -142,7 +150,7 @@ async function loadHorariosDisponiveis() {
     // Buscar horários para cada dia da semana
     for (const day of weekDays.value) {
       try {
-        const disponiveis = await authService.getHorariosDisponiveis(day.value, props.profissional);
+        const disponiveis = await authService.getHorariosDisponiveis(day.value);
         horarios[day.value] = disponiveis || [];
       } catch (err) {
         console.error(`Erro ao buscar horários para ${day.value}:`, err);
