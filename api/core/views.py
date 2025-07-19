@@ -17,6 +17,7 @@ from .serializers import (EmpresaSerializer, ConfiguracaoBrandSerializer,
 from .permissions import PermissionChecker, require_permission, HasPermission, require_role
 from usuarios.models import Usuario
 from usuarios.serializers import UsuarioSerializer
+from animais.models import Animal
 
 # Create your views here.
 
@@ -909,5 +910,442 @@ def get_user_roles(request, user_id):
         return Response(serializer.data)
     except Usuario.DoesNotExist:
         return Response({'error': 'Usuário não encontrado'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+# ===== VIEWS PARA GESTÃO DE CLIENTES =====
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@require_permission('usuarios', 'read')
+def get_clientes(request):
+    """Listar todos os clientes"""
+    try:
+        clientes = Usuario.objects.filter(tipo='cliente').order_by('nome')
+        data = []
+        for cliente in clientes:
+            # Contar animais do cliente (usando 'dono' em vez de 'cliente')
+            animais_count = Animal.objects.filter(dono=cliente).count()
+            # Contar agendamentos do cliente
+            agendamentos_count = Agendamento.objects.filter(cliente=cliente).count()
+            
+            data.append({
+                'id': cliente.id,
+                'nome': cliente.nome,
+                'email': cliente.email,
+                'telefone': cliente.telefone,
+                'endereco': cliente.endereco,
+                'is_active': cliente.is_active,
+                'data_cadastro': cliente.date_joined,
+                'animais_count': animais_count,
+                'agendamentos_count': agendamentos_count
+            })
+        return Response(data)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@require_permission('usuarios', 'create')
+def create_cliente(request):
+    """Criar novo cliente"""
+    try:
+        data = request.data
+        # Criar usuário do tipo cliente
+        usuario = Usuario.objects.create_user(
+            username=data['email'],
+            email=data['email'],
+            password=data.get('password', '123456'),  # Senha padrão
+            nome=data['nome'],
+            telefone=data.get('telefone', ''),
+            endereco=data.get('endereco', ''),
+            tipo='cliente'
+        )
+        
+        return Response({
+            'id': usuario.id,
+            'nome': usuario.nome,
+            'email': usuario.email,
+            'message': 'Cliente criado com sucesso'
+        })
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+@require_permission('usuarios', 'update')
+def update_cliente(request, cliente_id):
+    """Atualizar cliente"""
+    try:
+        cliente = Usuario.objects.get(id=cliente_id, tipo='cliente')
+        data = request.data
+        
+        cliente.nome = data.get('nome', cliente.nome)
+        cliente.email = data.get('email', cliente.email)
+        cliente.telefone = data.get('telefone', cliente.telefone)
+        cliente.endereco = data.get('endereco', cliente.endereco)
+        cliente.is_active = data.get('is_active', cliente.is_active)
+        
+        cliente.save()
+        
+        return Response({'message': 'Cliente atualizado com sucesso'})
+    except Usuario.DoesNotExist:
+        return Response({'error': 'Cliente não encontrado'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+@require_permission('usuarios', 'update')
+def toggle_cliente_status(request, cliente_id):
+    """Ativar/desativar cliente"""
+    try:
+        cliente = Usuario.objects.get(id=cliente_id, tipo='cliente')
+        cliente.is_active = not cliente.is_active
+        cliente.save()
+        
+        return Response({
+            'message': f'Cliente {"ativado" if cliente.is_active else "desativado"} com sucesso',
+            'is_active': cliente.is_active
+        })
+    except Usuario.DoesNotExist:
+        return Response({'error': 'Cliente não encontrado'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@require_permission('usuarios', 'read')
+def get_cliente_stats(request):
+    """Buscar estatísticas de clientes"""
+    try:
+        total_clientes = Usuario.objects.filter(tipo='cliente').count()
+        clientes_ativos = Usuario.objects.filter(tipo='cliente', is_active=True).count()
+        total_animais = Animal.objects.count()
+        
+        # Agendamentos do mês atual (usando 'data_hora' em vez de 'data')
+        from datetime import datetime, timedelta
+        hoje = datetime.now()
+        inicio_mes = hoje.replace(day=1)
+        agendamentos_mes = Agendamento.objects.filter(
+            data_hora__gte=inicio_mes
+        ).count()
+        
+        return Response({
+            'totalClientes': total_clientes,
+            'clientesAtivos': clientes_ativos,
+            'totalAnimais': total_animais,
+            'agendamentosMes': agendamentos_mes
+        })
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)
+
+
+# ===== VIEWS PARA GESTÃO DE ANIMAIS =====
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@require_permission('animais', 'read')
+def get_animais(request):
+    """Listar todos os animais"""
+    try:
+        animais = Animal.objects.select_related('dono').order_by('nome')
+        data = []
+        for animal in animais:
+            # Contar agendamentos do animal
+            agendamentos_count = Agendamento.objects.filter(animal=animal).count()
+            
+            # Calcular idade a partir da data de nascimento
+            idade = None
+            if animal.data_nascimento:
+                from datetime import date
+                hoje = date.today()
+                idade = hoje.year - animal.data_nascimento.year - ((hoje.month, hoje.day) < (animal.data_nascimento.month, animal.data_nascimento.day))
+            
+            data.append({
+                'id': animal.id,
+                'nome': animal.nome,
+                'cliente_id': animal.dono.id,
+                'cliente_nome': animal.dono.nome,
+                'especie': animal.especie,
+                'raca': animal.raca,
+                'data_nascimento': animal.data_nascimento,
+                'idade': idade,
+                'peso': animal.peso,
+                'observacoes': animal.observacoes,
+                'is_active': True,  # Todos os animais são considerados ativos por padrão
+                'data_cadastro': animal.id,  # Usando ID como referência temporal
+                'agendamentos_count': agendamentos_count
+            })
+        return Response(data)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@require_permission('animais', 'create')
+def create_animal(request):
+    """Criar novo animal"""
+    try:
+        data = request.data
+        cliente = Usuario.objects.get(id=data['cliente_id'], tipo='cliente')
+        
+        animal = Animal.objects.create(
+            nome=data['nome'],
+            dono=cliente,  # Usando 'dono' em vez de 'cliente'
+            especie=data['especie'],
+            raca=data.get('raca', ''),
+            data_nascimento=data.get('data_nascimento'),
+            peso=data.get('peso'),
+            observacoes=data.get('observacoes', '')
+        )
+        
+        return Response({
+            'id': animal.id,
+            'nome': animal.nome,
+            'message': 'Animal criado com sucesso'
+        })
+    except Usuario.DoesNotExist:
+        return Response({'error': 'Cliente não encontrado'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+@require_permission('animais', 'update')
+def update_animal(request, animal_id):
+    """Atualizar animal"""
+    try:
+        animal = Animal.objects.get(id=animal_id)
+        data = request.data
+        
+        animal.nome = data.get('nome', animal.nome)
+        animal.especie = data.get('especie', animal.especie)
+        animal.raca = data.get('raca', animal.raca)
+        animal.data_nascimento = data.get('data_nascimento', animal.data_nascimento)
+        animal.peso = data.get('peso', animal.peso)
+        animal.observacoes = data.get('observacoes', animal.observacoes)
+        
+        if 'cliente_id' in data:
+            cliente = Usuario.objects.get(id=data['cliente_id'], tipo='cliente')
+            animal.dono = cliente  # Usando 'dono' em vez de 'cliente'
+        
+        animal.save()
+        
+        return Response({'message': 'Animal atualizado com sucesso'})
+    except Animal.DoesNotExist:
+        return Response({'error': 'Animal não encontrado'}, status=404)
+    except Usuario.DoesNotExist:
+        return Response({'error': 'Cliente não encontrado'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)
+
+
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@require_permission('animais', 'read')
+def get_animal_stats(request):
+    """Buscar estatísticas de animais"""
+    try:
+        total_animais = Animal.objects.count()
+        # Como não há campo is_active, todos os animais são considerados ativos
+        animais_ativos = Animal.objects.count()
+        total_clientes = Usuario.objects.filter(tipo='cliente').count()
+        
+        # Agendamentos do mês atual (usando 'data_hora' em vez de 'data')
+        from datetime import datetime, timedelta
+        hoje = datetime.now()
+        inicio_mes = hoje.replace(day=1)
+        agendamentos_mes = Agendamento.objects.filter(
+            data_hora__gte=inicio_mes
+        ).count()
+        
+        return Response({
+            'totalAnimais': total_animais,
+            'animaisAtivos': animais_ativos,
+            'totalClientes': total_clientes,
+            'agendamentosMes': agendamentos_mes
+        })
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@require_permission('usuarios', 'read')
+def get_cliente_detail(request, cliente_id):
+    """Buscar cliente específico"""
+    try:
+        cliente = Usuario.objects.get(id=cliente_id, tipo='cliente')
+        
+        # Contar animais do cliente
+        animais_count = Animal.objects.filter(dono=cliente).count()
+        # Contar agendamentos do cliente
+        agendamentos_count = Agendamento.objects.filter(cliente=cliente).count()
+        
+        data = {
+            'id': cliente.id,
+            'nome': cliente.nome,
+            'email': cliente.email,
+            'telefone': cliente.telefone,
+            'endereco': cliente.endereco,
+            'is_active': cliente.is_active,
+            'data_cadastro': cliente.date_joined,
+            'animais_count': animais_count,
+            'agendamentos_count': agendamentos_count
+        }
+        return Response(data)
+    except Usuario.DoesNotExist:
+        return Response({'error': 'Cliente não encontrado'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@require_permission('animais', 'read')
+def get_cliente_animais(request, cliente_id):
+    """Buscar animais de um cliente específico"""
+    try:
+        cliente = Usuario.objects.get(id=cliente_id, tipo='cliente')
+        animais = Animal.objects.filter(dono=cliente).order_by('nome')
+        
+        data = []
+        for animal in animais:
+            # Contar agendamentos do animal
+            agendamentos_count = Agendamento.objects.filter(animal=animal).count()
+            
+            # Calcular idade a partir da data de nascimento
+            idade = None
+            if animal.data_nascimento:
+                from datetime import date
+                hoje = date.today()
+                idade = hoje.year - animal.data_nascimento.year - ((hoje.month, hoje.day) < (animal.data_nascimento.month, animal.data_nascimento.day))
+            
+            data.append({
+                'id': animal.id,
+                'nome': animal.nome,
+                'especie': animal.especie,
+                'raca': animal.raca,
+                'data_nascimento': animal.data_nascimento,
+                'idade': idade,
+                'peso': animal.peso,
+                'observacoes': animal.observacoes,
+                'agendamentos_count': agendamentos_count
+            })
+        return Response(data)
+    except Usuario.DoesNotExist:
+        return Response({'error': 'Cliente não encontrado'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@require_permission('agendamentos', 'read')
+def get_cliente_agendamentos(request, cliente_id):
+    """Buscar agendamentos de um cliente específico"""
+    try:
+        cliente = Usuario.objects.get(id=cliente_id, tipo='cliente')
+        agendamentos = Agendamento.objects.filter(cliente=cliente).select_related(
+            'animal', 'servico', 'responsavel'
+        ).order_by('-data_hora')[:10]  # Últimos 10 agendamentos
+        
+        data = []
+        for agendamento in agendamentos:
+            data.append({
+                'id': agendamento.id,
+                'animal_nome': agendamento.animal.nome,
+                'servico_nome': agendamento.servico.nome,
+                'data_hora': agendamento.data_hora,
+                'responsavel_nome': agendamento.responsavel.nome if agendamento.responsavel else None,
+                'observacoes': agendamento.observacoes,
+                'status': 'confirmado'  # Status padrão
+            })
+        return Response(data)
+    except Usuario.DoesNotExist:
+        return Response({'error': 'Cliente não encontrado'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@require_permission('animais', 'read')
+def get_animal_detail(request, animal_id):
+    """Buscar animal específico"""
+    try:
+        animal = Animal.objects.select_related('dono').get(id=animal_id)
+        
+        # Calcular idade a partir da data de nascimento
+        idade = None
+        if animal.data_nascimento:
+            from datetime import date
+            hoje = date.today()
+            idade = hoje.year - animal.data_nascimento.year - ((hoje.month, hoje.day) < (animal.data_nascimento.month, animal.data_nascimento.day))
+        
+        # Contar agendamentos do animal
+        agendamentos_count = Agendamento.objects.filter(animal=animal).count()
+        
+        # Buscar último agendamento
+        ultimo_agendamento = Agendamento.objects.filter(animal=animal).order_by('-data_hora').first()
+        
+        data = {
+            'id': animal.id,
+            'nome': animal.nome,
+            'cliente_id': animal.dono.id,
+            'cliente_nome': animal.dono.nome,
+            'cliente_email': animal.dono.email,
+            'cliente_telefone': animal.dono.telefone,
+            'especie': animal.especie,
+            'raca': animal.raca,
+            'data_nascimento': animal.data_nascimento,
+            'idade': idade,
+            'peso': animal.peso,
+            'observacoes': animal.observacoes,
+            'agendamentos_count': agendamentos_count,
+            'ultimo_agendamento': ultimo_agendamento.data_hora if ultimo_agendamento else None
+        }
+        return Response(data)
+    except Animal.DoesNotExist:
+        return Response({'error': 'Animal não encontrado'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@require_permission('agendamentos', 'read')
+def get_animal_agendamentos(request, animal_id):
+    """Buscar agendamentos de um animal específico"""
+    try:
+        animal = Animal.objects.get(id=animal_id)
+        agendamentos = Agendamento.objects.filter(animal=animal).select_related(
+            'servico', 'responsavel'
+        ).order_by('-data_hora')[:10]  # Últimos 10 agendamentos
+        
+        data = []
+        for agendamento in agendamentos:
+            data.append({
+                'id': agendamento.id,
+                'servico_nome': agendamento.servico.nome,
+                'data_hora': agendamento.data_hora,
+                'responsavel_nome': agendamento.responsavel.nome if agendamento.responsavel else None,
+                'observacoes': agendamento.observacoes,
+                'status': 'confirmado'  # Status padrão
+            })
+        return Response(data)
+    except Animal.DoesNotExist:
+        return Response({'error': 'Animal não encontrado'}, status=404)
     except Exception as e:
         return Response({'error': str(e)}, status=500)

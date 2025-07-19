@@ -393,6 +393,152 @@ class AdminService {
       throw error
     }
   }
+
+  // ===== CLIENTES =====
+  
+  // Buscar todos os clientes
+  async getClientes() {
+    try {
+      return await apiService.get('/admin/clientes/')
+    } catch (error) {
+      console.error('Erro ao buscar clientes:', error)
+      throw error
+    }
+  }
+
+  // Criar novo cliente
+  async createCliente(clienteData) {
+    try {
+      return await apiService.post('/admin/clientes/', clienteData)
+    } catch (error) {
+      console.error('Erro ao criar cliente:', error)
+      throw error
+    }
+  }
+
+  // Atualizar cliente
+  async updateCliente(clienteId, clienteData) {
+    try {
+      return await apiService.put(`/admin/clientes/${clienteId}/`, clienteData)
+    } catch (error) {
+      console.error('Erro ao atualizar cliente:', error)
+      throw error
+    }
+  }
+
+  // Ativar/desativar cliente
+  async toggleClienteStatus(clienteId) {
+    try {
+      return await apiService.patch(`/admin/clientes/${clienteId}/toggle/`)
+    } catch (error) {
+      console.error('Erro ao alterar status do cliente:', error)
+      throw error
+    }
+  }
+
+  // Buscar estatísticas de clientes
+  async getClienteStats() {
+    try {
+      return await apiService.get('/admin/clientes/stats/')
+    } catch (error) {
+      console.error('Erro ao buscar estatísticas de clientes:', error)
+      throw error
+    }
+  }
+
+  // Buscar cliente específico
+  async getCliente(clienteId) {
+    try {
+      return await apiService.get(`/admin/clientes/${clienteId}/detail/`)
+    } catch (error) {
+      console.error('Erro ao buscar cliente:', error)
+      throw error
+    }
+  }
+
+  // Buscar animais de um cliente
+  async getClienteAnimais(clienteId) {
+    try {
+      return await apiService.get(`/admin/clientes/${clienteId}/animais/`)
+    } catch (error) {
+      console.error('Erro ao buscar animais do cliente:', error)
+      throw error
+    }
+  }
+
+  // Buscar agendamentos de um cliente
+  async getClienteAgendamentos(clienteId) {
+    try {
+      return await apiService.get(`/admin/clientes/${clienteId}/agendamentos/`)
+    } catch (error) {
+      console.error('Erro ao buscar agendamentos do cliente:', error)
+      throw error
+    }
+  }
+
+  // ===== ANIMAIS =====
+  
+  // Buscar todos os animais
+  async getAnimais() {
+    try {
+      return await apiService.get('/admin/animais/')
+    } catch (error) {
+      console.error('Erro ao buscar animais:', error)
+      throw error
+    }
+  }
+
+  // Criar novo animal
+  async createAnimal(animalData) {
+    try {
+      return await apiService.post('/admin/animais/', animalData)
+    } catch (error) {
+      console.error('Erro ao criar animal:', error)
+      throw error
+    }
+  }
+
+  // Atualizar animal
+  async updateAnimal(animalId, animalData) {
+    try {
+      return await apiService.put(`/admin/animais/${animalId}/`, animalData)
+    } catch (error) {
+      console.error('Erro ao atualizar animal:', error)
+      throw error
+    }
+  }
+
+
+
+  // Buscar estatísticas de animais
+  async getAnimalStats() {
+    try {
+      return await apiService.get('/admin/animais/stats/')
+    } catch (error) {
+      console.error('Erro ao buscar estatísticas de animais:', error)
+      throw error
+    }
+  }
+
+  // Buscar animal específico
+  async getAnimal(animalId) {
+    try {
+      return await apiService.get(`/admin/animais/${animalId}/detail/`)
+    } catch (error) {
+      console.error('Erro ao buscar animal:', error)
+      throw error
+    }
+  }
+
+  // Buscar agendamentos de um animal
+  async getAnimalAgendamentos(animalId) {
+    try {
+      return await apiService.get(`/admin/animais/${animalId}/agendamentos/`)
+    } catch (error) {
+      console.error('Erro ao buscar agendamentos do animal:', error)
+      throw error
+    }
+  }
 }
 
 export default new AdminService() 

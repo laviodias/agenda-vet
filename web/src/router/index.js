@@ -96,6 +96,46 @@ const routes = [
           requiresAdmin: true,
           permissions: [{ resource: 'usuarios', action: 'manage' }]
         }
+      },
+      {
+        path: 'clientes',
+        name: 'Clientes',
+        component: () => import('../views/admin/Clientes.vue'),
+        meta: { 
+          requiresAuth: true, 
+          requiresAdmin: true,
+          permissions: [{ resource: 'usuarios', action: 'read' }]
+        }
+      },
+      {
+        path: 'clientes/:id',
+        name: 'ClienteDetalhes',
+        component: () => import('../views/admin/ClienteDetalhes.vue'),
+        meta: { 
+          requiresAuth: true, 
+          requiresAdmin: true,
+          permissions: [{ resource: 'usuarios', action: 'read' }]
+        }
+      },
+      {
+        path: 'animais',
+        name: 'Animais',
+        component: () => import('../views/admin/Animais.vue'),
+        meta: { 
+          requiresAuth: true, 
+          requiresAdmin: true,
+          permissions: [{ resource: 'animais', action: 'read' }]
+        }
+      },
+      {
+        path: 'animais/:id',
+        name: 'AnimalDetalhes',
+        component: () => import('../views/admin/AnimalDetalhes.vue'),
+        meta: { 
+          requiresAuth: true, 
+          requiresAdmin: true,
+          permissions: [{ resource: 'animais', action: 'read' }]
+        }
       }
     ]
   }

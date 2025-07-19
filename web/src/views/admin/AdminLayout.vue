@@ -37,6 +37,24 @@ const logout = () => {
             </span>
           </RouterLink>
 
+          <RouterLink class="navbar-item" to="/admin/clientes">
+            <span class="icon-text">
+              <span class="icon">
+                <i class="fas fa-user-friends"></i>
+              </span>
+              <span>Clientes</span>
+            </span>
+          </RouterLink>
+
+          <RouterLink class="navbar-item" to="/admin/animais">
+            <span class="icon-text">
+              <span class="icon">
+                <i class="fas fa-paw"></i>
+              </span>
+              <span>Animais</span>
+            </span>
+          </RouterLink>
+
           <RouterLink class="navbar-item" to="/admin/servicos">
             <span class="icon-text">
               <span class="icon">

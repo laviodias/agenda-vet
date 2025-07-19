@@ -21,4 +21,22 @@ urlpatterns = [
     path('admin/users/assign-roles/', views.assign_user_roles, name='assign_user_roles'),  # POST - atribuir roles
     path('admin/users/<int:user_id>/roles/', views.get_user_roles, name='get_user_roles'),  # GET - buscar roles do usuário
     path('admin/roles/stats/', views.get_role_stats, name='get_role_stats'),  # GET - estatísticas
+    
+    # URLs para gestão de clientes
+    path('admin/clientes/', views.get_clientes, name='get_clientes'),  # GET - listar clientes
+    path('admin/clientes/create/', views.create_cliente, name='create_cliente'),  # POST - criar cliente
+    path('admin/clientes/<int:cliente_id>/', views.update_cliente, name='update_cliente'),  # PUT - atualizar cliente
+    path('admin/clientes/<int:cliente_id>/toggle/', views.toggle_cliente_status, name='toggle_cliente_status'),  # PATCH - toggle status
+    path('admin/clientes/stats/', views.get_cliente_stats, name='get_cliente_stats'),  # GET - estatísticas de clientes
+    path('admin/clientes/<int:cliente_id>/detail/', views.get_cliente_detail, name='get_cliente_detail'),  # GET - detalhes do cliente
+    path('admin/clientes/<int:cliente_id>/animais/', views.get_cliente_animais, name='get_cliente_animais'),  # GET - animais do cliente
+    path('admin/clientes/<int:cliente_id>/agendamentos/', views.get_cliente_agendamentos, name='get_cliente_agendamentos'),  # GET - agendamentos do cliente
+    
+    # URLs para gestão de animais
+    path('admin/animais/', views.get_animais, name='get_animais'),  # GET - listar animais
+    path('admin/animais/create/', views.create_animal, name='create_animal'),  # POST - criar animal
+    path('admin/animais/<int:animal_id>/', views.update_animal, name='update_animal'),  # PUT - atualizar animal
+    path('admin/animais/stats/', views.get_animal_stats, name='get_animal_stats'),  # GET - estatísticas de animais
+    path('admin/animais/<int:animal_id>/detail/', views.get_animal_detail, name='get_animal_detail'),  # GET - detalhes do animal
+    path('admin/animais/<int:animal_id>/agendamentos/', views.get_animal_agendamentos, name='get_animal_agendamentos'),  # GET - agendamentos do animal
 ] 

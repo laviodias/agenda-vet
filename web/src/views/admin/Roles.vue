@@ -534,7 +534,7 @@ export default {
     async loadStats() {
       try {
         const response = await adminService.getRoleStats()
-        this.stats = response.data || {
+        this.stats = response || {
           rolesCount: this.roles.length,
           permissionsCount: this.permissions.length,
           usersCount: this.users.length,

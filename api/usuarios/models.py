@@ -10,6 +10,7 @@ class Usuario(AbstractUser):
   tipo = models.CharField(max_length=15, choices=TIPO_CHOICES, default='cliente')
   nome = models.CharField(max_length=255, blank=True, null=True)
   telefone = models.CharField(max_length=20, blank=True, null=True)
+  endereco = models.TextField(blank=True, null=True)
   crmv = models.CharField(max_length=20, blank=True, null=True)  # Para profissionais
   especialidade = models.CharField(max_length=100, blank=True, null=True)  # Para profissionais
   groups = models.ManyToManyField(
