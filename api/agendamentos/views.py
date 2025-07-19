@@ -1,15 +1,17 @@
 from django.shortcuts import render
 from rest_framework import viewsets, status, permissions
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from django.utils import timezone
 from datetime import datetime, timedelta
-from .models import DisponibilidadeAgenda, Agendamento
-from .serializers import DisponibilidadeAgendaSerializer, AgendamentoSerializer
-from servicos.models import Servico
+from django.db.models import Sum, Count
+from .models import Agendamento, DisponibilidadeAgenda
+from .serializers import AgendamentoSerializer, DisponibilidadeAgendaSerializer
 from usuarios.models import Usuario
-from core.permissions import PermissionChecker, require_permission, HasPermission
 from animais.models import Animal
+from servicos.models import Servico
+from core.permissions import PermissionChecker, require_permission, require_role
+from core.views import dashboard_stats, agendamentos_recentes
 
 # Create your views here.
 
@@ -137,6 +139,7 @@ def criar_agendamento(request):
     try:
         data = request.data.copy()
         data['cliente'] = request.user.id
+        data['empresa'] = 1  # Usar empresa padrão (ID 1 - AgendaVet)
         
         # Verificar se a data/hora está disponível
         data_hora = datetime.fromisoformat(data['data_hora'].replace('Z', '+00:00'))
@@ -199,9 +202,9 @@ def cancelar_agendamento(request, agendamento_id):
                 'error': 'Sem permissão para cancelar este agendamento'
             }, status=status.HTTP_403_FORBIDDEN)
         
-        # Aqui você pode adicionar lógica adicional para cancelamento
-        # Por exemplo, marcar como cancelado em vez de deletar
-        agendamento.delete()
+        # Marcar como cancelado em vez de deletar
+        agendamento.status = 'cancelado'
+        agendamento.save()
         
         return Response({'message': 'Agendamento cancelado com sucesso'})
     except Agendamento.DoesNotExist:
@@ -256,6 +259,10 @@ def create_agendamento_admin(request):
     try:
         data = request.data
         
+        # Usar empresa com ID 1 fixo
+        from core.models import Empresa
+        empresa = Empresa.objects.get(id=1)
+        
         # Buscar objetos relacionados
         cliente = Usuario.objects.get(id=data['cliente_id'], tipo='cliente')
         animal = Animal.objects.get(id=data['animal_id'])
@@ -266,6 +273,7 @@ def create_agendamento_admin(request):
         
         # Criar agendamento
         agendamento = Agendamento.objects.create(
+            empresa=empresa,  # Adicionando empresa
             cliente=cliente,
             animal=animal,
             servico=servico,
@@ -278,6 +286,8 @@ def create_agendamento_admin(request):
             'id': agendamento.id,
             'message': 'Agendamento criado com sucesso'
         })
+    except Empresa.DoesNotExist:
+        return Response({'error': 'Empresa não encontrada'}, status=404)
     except Usuario.DoesNotExist:
         return Response({'error': 'Usuário não encontrado'}, status=404)
     except Animal.DoesNotExist:
@@ -458,61 +468,179 @@ def get_servicos_admin(request):
         return Response({'error': str(e)}, status=500)
 
 @api_view(['GET'])
-@permission_classes([permissions.AllowAny])
+@permission_classes([permissions.IsAuthenticated])
 def horarios_disponiveis(request):
     """
-    Busca horários disponíveis para um serviço e data
+    Busca horários disponíveis para uma data e profissional
     """
     try:
         data = request.GET.get('data')
-        servico_id = request.GET.get('servico_id')
-        profissional_id = request.GET.get('profissional_id')
+        profissional = request.GET.get('profissional', '')
         
-        if not data or not servico_id:
+        if not data:
             return Response({
-                'error': 'Data e serviço são obrigatórios'
+                'error': 'Data é obrigatória'
             }, status=status.HTTP_400_BAD_REQUEST)
         
         # Converter data
         data_obj = datetime.strptime(data, '%Y-%m-%d').date()
         
-        # Buscar disponibilidades
-        disponibilidades = DisponibilidadeAgenda.objects.filter(
-            data=data_obj,
-            servico_id=servico_id
-        )
-        
-        if profissional_id:
-            disponibilidades = disponibilidades.filter(responsavel_id=profissional_id)
+        # Horários padrão disponíveis (8h às 18h, intervalos de 1h)
+        horarios_padrao = [
+            '08:00', '09:00', '10:00', '11:00', 
+            '14:00', '15:00', '16:00', '17:00'
+        ]
         
         # Buscar agendamentos existentes para excluir horários ocupados
         agendamentos = Agendamento.objects.filter(
-            data_hora__date=data_obj,
-            servico_id=servico_id
+            data_hora__date=data_obj
         )
         
-        if profissional_id:
-            agendamentos = agendamentos.filter(responsavel_id=profissional_id)
+        if profissional:
+            agendamentos = agendamentos.filter(responsavel_id=profissional)
         
-        horarios_ocupados = [a.data_hora.time() for a in agendamentos]
+        # Converter horários ocupados para formato string
+        horarios_ocupados = [
+            a.data_hora.strftime('%H:%M') for a in agendamentos
+        ]
         
         # Filtrar horários disponíveis
-        horarios_disponiveis = []
-        for disponibilidade in disponibilidades:
-            hora_atual = disponibilidade.hora_inicio
-            while hora_atual < disponibilidade.hora_fim:
-                if hora_atual not in horarios_ocupados:
-                    horarios_disponiveis.append(hora_atual.strftime('%H:%M'))
-                hora_atual = (datetime.combine(datetime.today(), hora_atual) + timedelta(minutes=30)).time()
+        horarios_disponiveis = [
+            horario for horario in horarios_padrao 
+            if horario not in horarios_ocupados
+        ]
         
-        return Response({
-            'data': data,
-            'servico_id': servico_id,
-            'horarios_disponiveis': horarios_disponiveis
-        })
+        return Response(horarios_disponiveis)
         
     except Exception as e:
         return Response({
             'error': 'Erro ao buscar horários disponíveis',
             'detail': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+@require_permission('agendamentos', 'read')
+def get_horarios_disponiveis_admin(request):
+    """Buscar horários disponíveis para admin"""
+    try:
+        data = request.GET.get('data')
+        profissional = request.GET.get('profissional', '')
+        
+        if not data:
+            return Response({
+                'error': 'Data é obrigatória'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Converter data
+        data_obj = datetime.strptime(data, '%Y-%m-%d').date()
+        
+        # Horários padrão disponíveis (8h às 18h, intervalos de 1h)
+        horarios_padrao = [
+            '08:00', '09:00', '10:00', '11:00', 
+            '14:00', '15:00', '16:00', '17:00'
+        ]
+        
+        # Buscar agendamentos existentes para excluir horários ocupados
+        agendamentos = Agendamento.objects.filter(
+            data_hora__date=data_obj
+        )
+        
+        if profissional:
+            agendamentos = agendamentos.filter(responsavel_id=profissional)
+        
+        # Converter horários ocupados para formato string
+        horarios_ocupados = [
+            a.data_hora.strftime('%H:%M') for a in agendamentos
+        ]
+        
+        # Filtrar horários disponíveis
+        horarios_disponiveis = [
+            horario for horario in horarios_padrao 
+            if horario not in horarios_ocupados
+        ]
+        
+        return Response(horarios_disponiveis)
+        
+    except Exception as e:
+        return Response({
+            'error': 'Erro ao buscar horários disponíveis',
+            'detail': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+@require_permission('agendamentos', 'create')
+def create_horario_disponivel_admin(request):
+    """Criar horário disponível para admin"""
+    try:
+        data = request.data
+        
+        # Validar campos obrigatórios
+        if 'data' not in data:
+            return Response({'error': 'Campo "data" é obrigatório'}, status=400)
+        if 'hora_inicio' not in data:
+            return Response({'error': 'Campo "hora_inicio" é obrigatório'}, status=400)
+        if 'hora_fim' not in data:
+            return Response({'error': 'Campo "hora_fim" é obrigatório'}, status=400)
+        
+        # Usar empresa com ID 1 fixo
+        from core.models import Empresa
+        empresa = Empresa.objects.get(id=1)
+        
+        # Converter data e hora
+        data_obj = datetime.strptime(data['data'], '%Y-%m-%d').date()
+        hora_inicio = datetime.strptime(data['hora_inicio'], '%H:%M').time()
+        hora_fim = datetime.strptime(data['hora_fim'], '%H:%M').time()
+        
+        # Buscar serviço e responsável (opcionais)
+        servico = None
+        responsavel = None
+        
+        if 'servico_id' in data and data['servico_id']:
+            try:
+                servico = Servico.objects.get(id=data['servico_id'])
+            except Servico.DoesNotExist:
+                return Response({'error': 'Serviço não encontrado'}, status=404)
+        
+        if 'responsavel_id' in data and data['responsavel_id']:
+            try:
+                responsavel = Usuario.objects.get(id=data['responsavel_id'], tipo='profissional')
+            except Usuario.DoesNotExist:
+                return Response({'error': 'Responsável não encontrado'}, status=404)
+        
+        disponibilidade = DisponibilidadeAgenda.objects.create(
+            empresa=empresa,
+            data=data_obj,
+            hora_inicio=hora_inicio,
+            hora_fim=hora_fim,
+            servico=servico,
+            responsavel=responsavel
+        )
+        
+        return Response({
+            'id': disponibilidade.id,
+            'message': 'Horário disponível criado com sucesso'
+        })
+    except Empresa.DoesNotExist:
+        return Response({'error': 'Empresa não encontrada'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)
+
+
+@api_view(['DELETE'])
+@permission_classes([permissions.IsAuthenticated])
+@require_permission('agendamentos', 'delete')
+def delete_horario_disponivel_admin(request, disponibilidade_id):
+    """Excluir horário disponível para admin"""
+    try:
+        disponibilidade = DisponibilidadeAgenda.objects.get(id=disponibilidade_id)
+        disponibilidade.delete()
+        
+        return Response({'message': 'Horário disponível excluído com sucesso'})
+    except DisponibilidadeAgenda.DoesNotExist:
+        return Response({'error': 'Horário disponível não encontrado'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)

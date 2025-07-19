@@ -6,7 +6,7 @@ class AdminService {
   // Buscar estatísticas do dashboard
   async getDashboardStats() {
     try {
-      return await apiService.get('/api/dashboard/')
+      return await apiService.get('/agendamentos/dashboard/')
     } catch (error) {
       console.error('Erro ao buscar estatísticas:', error)
       // Retornar dados mockados em caso de erro
@@ -28,45 +28,9 @@ class AdminService {
   // Buscar agendamentos recentes
   async getAgendamentosRecentes() {
     try {
-      return await apiService.get('/api/agendamentos_recentes/')
+      return await apiService.get('/agendamentos/recentes/')
     } catch (error) {
       console.error('Erro ao buscar agendamentos recentes:', error)
-      // Retornar dados mockados em caso de erro
-      return [
-        {
-          id: 1,
-          data: '2025-08-15',
-          horario: '14:00',
-          cliente: 'João Silva',
-          pet: 'Rex',
-          servico: 'Consulta Veterinária',
-          profissional: 'Dr. João Silva',
-          status: 'confirmado',
-          preco: 80.00
-        },
-        {
-          id: 2,
-          data: '2025-08-15',
-          horario: '15:30',
-          cliente: 'Maria Santos',
-          pet: 'Luna',
-          servico: 'Vacinação',
-          profissional: 'Dra. Maria Santos',
-          status: 'pendente',
-          preco: 60.00
-        },
-        {
-          id: 3,
-          data: '2025-08-16',
-          horario: '09:00',
-          cliente: 'Pedro Costa',
-          pet: 'Thor',
-          servico: 'Banho e Tosa',
-          profissional: 'Dr. Pedro Costa',
-          status: 'confirmado',
-          preco: 50.00
-        }
-      ]
     }
   }
 
@@ -75,7 +39,7 @@ class AdminService {
   // Listar todos os agendamentos
   async getAllAgendamentos(params = {}) {
     try {
-      return await apiService.get('/admin/agendamentos', params)
+      return await apiService.get('/agendamentos/listar/', params)
     } catch (error) {
       console.error('Erro ao buscar agendamentos:', error)
       throw error
@@ -85,7 +49,7 @@ class AdminService {
   // Confirmar agendamento
   async confirmarAgendamento(agendamentoId) {
     try {
-      return await apiService.patch(`/admin/agendamentos/${agendamentoId}/confirmar`)
+      return await apiService.patch(`/agendamentos/${agendamentoId}/confirmar/`)
     } catch (error) {
       console.error('Erro ao confirmar agendamento:', error)
       throw error
@@ -95,7 +59,7 @@ class AdminService {
   // Cancelar agendamento
   async cancelarAgendamento(agendamentoId, motivo = '') {
     try {
-      return await apiService.patch(`/admin/agendamentos/${agendamentoId}/cancelar`, { motivo })
+      return await apiService.patch(`/agendamentos/${agendamentoId}/cancelar/`, { motivo })
     } catch (error) {
       console.error('Erro ao cancelar agendamento:', error)
       throw error
@@ -107,7 +71,7 @@ class AdminService {
   // Listar serviços
   async getServicos() {
     try {
-      return await apiService.get('/admin/servicos')
+      return await apiService.get('/admin/servicos/')
     } catch (error) {
       console.error('Erro ao buscar serviços:', error)
       throw error
@@ -117,7 +81,7 @@ class AdminService {
   // Criar serviço
   async createServico(servicoData) {
     try {
-      return await apiService.post('/admin/servicos', servicoData)
+      return await apiService.post('/admin/servicos/create/', servicoData)
     } catch (error) {
       console.error('Erro ao criar serviço:', error)
       throw error
@@ -127,7 +91,7 @@ class AdminService {
   // Atualizar serviço
   async updateServico(servicoId, servicoData) {
     try {
-      return await apiService.put(`/admin/servicos/${servicoId}`, servicoData)
+      return await apiService.put(`/admin/servicos/${servicoId}/`, servicoData)
     } catch (error) {
       console.error('Erro ao atualizar serviço:', error)
       throw error
@@ -137,7 +101,7 @@ class AdminService {
   // Deletar serviço
   async deleteServico(servicoId) {
     try {
-      return await apiService.delete(`/admin/servicos/${servicoId}`)
+      return await apiService.delete(`/admin/servicos/${servicoId}/delete/`)
     } catch (error) {
       console.error('Erro ao deletar serviço:', error)
       throw error
@@ -149,7 +113,7 @@ class AdminService {
   // Listar profissionais
   async getProfissionais() {
     try {
-      return await apiService.get('/admin/profissionais')
+      return await apiService.get('/usuarios/profissionais/')
     } catch (error) {
       console.error('Erro ao buscar profissionais:', error)
       throw error
@@ -159,7 +123,7 @@ class AdminService {
   // Criar profissional
   async createProfissional(profissionalData) {
     try {
-      return await apiService.post('/admin/profissionais', profissionalData)
+      return await apiService.post('/usuarios/criar/', profissionalData)
     } catch (error) {
       console.error('Erro ao criar profissional:', error)
       throw error
@@ -169,7 +133,7 @@ class AdminService {
   // Atualizar profissional
   async updateProfissional(profissionalId, profissionalData) {
     try {
-      return await apiService.put(`/admin/profissionais/${profissionalId}`, profissionalData)
+      return await apiService.put(`/usuarios/${profissionalId}/`, profissionalData)
     } catch (error) {
       console.error('Erro ao atualizar profissional:', error)
       throw error
@@ -179,7 +143,7 @@ class AdminService {
   // Deletar profissional
   async deleteProfissional(profissionalId) {
     try {
-      return await apiService.delete(`/admin/profissionais/${profissionalId}`)
+      return await apiService.delete(`/usuarios/${profissionalId}/deletar/`)
     } catch (error) {
       console.error('Erro ao deletar profissional:', error)
       throw error
@@ -364,7 +328,7 @@ class AdminService {
   // Atribuir roles a um usuário
   async assignUserRoles(userId, roles) {
     try {
-      return await apiService.post('/admin/users/assign-roles', {
+      return await apiService.post('/admin/users/assign-roles/', {
         user_id: userId,
         roles: roles
       })
@@ -491,7 +455,7 @@ class AdminService {
   // Criar novo animal
   async createAnimal(animalData) {
     try {
-      return await apiService.post('/admin/animais/', animalData)
+      return await apiService.post('/admin/animais/create/', animalData)
     } catch (error) {
       console.error('Erro ao criar animal:', error)
       throw error
@@ -555,7 +519,7 @@ class AdminService {
   // Criar novo agendamento
   async createAgendamento(agendamentoData) {
     try {
-      return await apiService.post('/admin/agendamentos/', agendamentoData)
+      return await apiService.post('/admin/agendamentos/create/', agendamentoData)
     } catch (error) {
       console.error('Erro ao criar agendamento:', error)
       throw error
@@ -585,7 +549,7 @@ class AdminService {
   // Excluir agendamento
   async deleteAgendamento(agendamentoId) {
     try {
-      return await apiService.delete(`/admin/agendamentos/${agendamentoId}/`)
+      return await apiService.delete(`/admin/agendamentos/${agendamentoId}/delete/`)
     } catch (error) {
       console.error('Erro ao excluir agendamento:', error)
       throw error

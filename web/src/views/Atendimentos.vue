@@ -38,7 +38,7 @@
             <div class="buttons">
               <button 
                 class="button is-primary is-medium"
-                @click="router.push('/cliente')"
+                @click="showNovoAgendamentoModal = true"
               >
                 <span class="icon">
                   <i class="fas fa-calendar-plus"></i>
@@ -135,7 +135,6 @@
                   class="input" 
                   type="text" 
                   placeholder="Buscar por serviço, pet ou observações..."
-                  @input="filterAtendimentos"
                 >
               </div>
             </div>
@@ -144,7 +143,7 @@
             <div class="field">
               <div class="control">
                 <div class="select">
-                  <select v-model="periodoFilter" @change="filterAtendimentos">
+                  <select v-model="periodoFilter">
                     <option value="">Todos os períodos</option>
                     <option value="futuro">Próximos atendimentos</option>
                     <option value="passado">Atendimentos realizados</option>
@@ -160,7 +159,7 @@
             <div class="field">
               <div class="control">
                 <div class="select">
-                  <select v-model="petFilter" @change="filterAtendimentos">
+                  <select v-model="petFilter">
                     <option value="">Todos os pets</option>
                     <option v-for="pet in pets" :key="pet.id" :value="pet.id">
                       {{ pet.nome }}
@@ -174,7 +173,7 @@
             <div class="field">
               <div class="control">
                 <div class="select">
-                  <select v-model="statusFilter" @change="filterAtendimentos">
+                  <select v-model="statusFilter">
                     <option value="">Todos os status</option>
                     <option value="confirmado">Confirmados</option>
                     <option value="pendente">Pendentes</option>
@@ -207,21 +206,21 @@
               <tr v-for="atendimento in filteredAtendimentos" :key="atendimento.id">
                 <td>
                   <div class="date-info">
-                    <span class="date">{{ formatarData(atendimento.data) }}</span>
-                    <span class="period" :class="getPeriodClass(atendimento.data)">
-                      {{ getPeriodLabel(atendimento.data) }}
+                    <span class="date">{{ formatarData(atendimento.data_hora) }}</span>
+                    <span class="period" :class="getPeriodClass(atendimento.data_hora)">
+                      {{ getPeriodLabel(atendimento.data_hora) }}
                     </span>
                   </div>
                 </td>
-                <td>{{ atendimento.hora }}</td>
+                <td>{{ formatarHora(atendimento.data_hora) }}</td>
                 <td>
                   <div class="pet-info">
-                    <span class="pet-name">{{ atendimento.animal }}</span>
-                    <span class="pet-species">{{ getPetSpecies(atendimento.animal_id) }}</span>
+                    <span class="pet-name">{{ atendimento.animal_nome || atendimento.animal }}</span>
+                    <span class="pet-species">{{ getPetSpecies(atendimento.animal_nome || atendimento.animal) }}</span>
                   </div>
                 </td>
-                <td>{{ atendimento.servico }}</td>
-                <td>{{ atendimento.profissional || 'Não atribuído' }}</td>
+                <td>{{ atendimento.servico_nome || atendimento.servico }}</td>
+                <td>{{ atendimento.responsavel_nome || atendimento.responsavel || 'Não atribuído' }}</td>
                 <td>
                   <span class="tag" :class="getStatusColor(atendimento.status)">
                     {{ getStatusText(atendimento.status) }}
@@ -280,7 +279,7 @@
               <div class="field">
                 <label class="label">Data</label>
                 <div class="control">
-                  <input class="input" type="text" :value="formatarData(atendimentoSelecionado.data)" readonly>
+                  <input class="input" type="text" :value="formatarData(atendimentoSelecionado.data_hora)" readonly>
                 </div>
               </div>
             </div>
@@ -288,7 +287,7 @@
               <div class="field">
                 <label class="label">Horário</label>
                 <div class="control">
-                  <input class="input" type="text" :value="atendimentoSelecionado.hora" readonly>
+                  <input class="input" type="text" :value="formatarHora(atendimentoSelecionado.data_hora)" readonly>
                 </div>
               </div>
             </div>
@@ -299,7 +298,7 @@
               <div class="field">
                 <label class="label">Pet</label>
                 <div class="control">
-                  <input class="input" type="text" :value="atendimentoSelecionado.animal" readonly>
+                  <input class="input" type="text" :value="atendimentoSelecionado.animal_nome || atendimentoSelecionado.animal" readonly>
                 </div>
               </div>
             </div>
@@ -307,7 +306,7 @@
               <div class="field">
                 <label class="label">Serviço</label>
                 <div class="control">
-                  <input class="input" type="text" :value="atendimentoSelecionado.servico" readonly>
+                  <input class="input" type="text" :value="atendimentoSelecionado.servico_nome || atendimentoSelecionado.servico" readonly>
                 </div>
               </div>
             </div>
@@ -318,7 +317,7 @@
               <div class="field">
                 <label class="label">Profissional</label>
                 <div class="control">
-                  <input class="input" type="text" :value="atendimentoSelecionado.profissional || 'Não atribuído'" readonly>
+                  <input class="input" type="text" :value="atendimentoSelecionado.responsavel_nome || atendimentoSelecionado.responsavel || 'Não atribuído'" readonly>
                 </div>
               </div>
             </div>
@@ -345,7 +344,7 @@
           <button 
             v-if="atendimentoSelecionado.status !== 'realizado' && atendimentoSelecionado.status !== 'cancelado'"
             class="button is-danger" 
-            @click="cancelarAtendimento(atendimentoSelecionado)"
+            @click="confirmarCancelamento"
           >
             Cancelar Atendimento
           </button>
@@ -369,12 +368,34 @@
           ></button>
         </header>
         <section class="modal-card-body">
-          <p>Tem certeza que deseja cancelar o atendimento para <strong>{{ atendimentoSelecionado.animal }}</strong> em {{ formatarData(atendimentoSelecionado.data) }} às {{ atendimentoSelecionado.hora }}?</p>
+          <p>Tem certeza que deseja cancelar o atendimento para <strong>{{ atendimentoSelecionado.animal_nome || atendimentoSelecionado.animal }}</strong> em {{ formatarData(atendimentoSelecionado.data_hora) }} às {{ formatarHora(atendimentoSelecionado.data_hora) }}?</p>
         </section>
         <footer class="modal-card-foot">
           <button class="button is-danger" @click="confirmarCancelamento">Confirmar Cancelamento</button>
           <button class="button" @click="showCancelarAtendimentoModal = false">Cancelar</button>
         </footer>
+      </div>
+    </div>
+
+    <!-- Modal de Novo Agendamento -->
+    <div v-if="showNovoAgendamentoModal" class="modal is-active">
+      <div class="modal-background" @click="showNovoAgendamentoModal = false"></div>
+      <div class="modal-card">
+        <header class="modal-card-head">
+          <p class="modal-card-title">Novo Agendamento</p>
+          <button 
+            class="delete" 
+            aria-label="close"
+            @click="showNovoAgendamentoModal = false"
+          ></button>
+        </header>
+        <section class="modal-card-body">
+          <AgendamentoForm 
+            :pets="pets"
+            @close="showNovoAgendamentoModal = false"
+            @agendamento-criado="handleAgendamentoCriado"
+          />
+        </section>
       </div>
     </div>
   </div>
@@ -384,85 +405,79 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useBrand } from '../composables/useBrand.js'
+import authService from '../services/authService.js'
+import AgendamentoForm from '../components/AgendamentoForm.vue'
 
 const router = useRouter()
 const { brandConfig } = useBrand()
 
-// Dados simulados - em produção viriam da API
-const atendimentos = ref([
-  {
-    id: 1,
-    data: '2025-01-15',
-    hora: '14:00',
-    animal: 'Rex',
-    animal_id: 1,
-    servico: 'Consulta Clínica',
-    profissional: 'Dr. João Silva',
-    status: 'realizado',
-    observacoes: 'Consulta de rotina. Pet apresentou boa saúde geral.'
-  },
-  {
-    id: 2,
-    data: '2025-01-20',
-    hora: '10:30',
-    animal: 'Luna',
-    animal_id: 2,
-    servico: 'Vacinação',
-    profissional: 'Dra. Maria Santos',
-    status: 'realizado',
-    observacoes: 'Vacina anual aplicada com sucesso.'
-  },
-  {
-    id: 3,
-    data: '2025-01-25',
-    hora: '16:00',
-    animal: 'Rex',
-    animal_id: 1,
-    servico: 'Banho e Tosa',
-    profissional: 'Ana Costa',
-    status: 'confirmado',
-    observacoes: 'Agendamento para banho e tosa completo.'
-  },
-  {
-    id: 4,
-    data: '2025-02-01',
-    hora: '09:00',
-    animal: 'Luna',
-    animal_id: 2,
-    servico: 'Consulta Clínica',
-    profissional: 'Dr. João Silva',
-    status: 'pendente',
-    observacoes: 'Consulta de retorno para verificar evolução.'
-  }
-])
+// Dados reativos
+const atendimentos = ref([])
+const pets = ref([])
+const user = ref(null)
+const loading = ref(false)
+const error = ref(null)
 
-const pets = ref([
-  { id: 1, nome: 'Rex', especie: 'Cão', raca: 'Labrador' },
-  { id: 2, nome: 'Luna', especie: 'Gato', raca: 'Persa' }
-])
-
+// Filtros
 const searchTerm = ref('')
 const periodoFilter = ref('')
 const petFilter = ref('')
 const statusFilter = ref('')
 const showVisualizarAtendimentoModal = ref(false)
 const showCancelarAtendimentoModal = ref(false)
+const showNovoAgendamentoModal = ref(false)
 const atendimentoSelecionado = ref(null)
+
+// Carregar dados na montagem do componente
+onMounted(async () => {
+  await loadData()
+})
+
+// Função para carregar todos os dados
+const loadData = async () => {
+  try {
+    loading.value = true
+    error.value = null
+    
+    // Carregar dados em paralelo
+    const [userData, agendamentosData, petsData] = await Promise.all([
+      authService.getMe(),
+      authService.getAtendimentos(),
+      authService.getPets()
+    ])
+    
+    console.log('Dados carregados:', { userData, agendamentosData, petsData })
+    
+    // Garantir que atendimentos seja sempre um array
+    atendimentos.value = Array.isArray(agendamentosData) ? agendamentosData : []
+    user.value = userData
+    pets.value = Array.isArray(petsData) ? petsData : []
+    
+  } catch (err) {
+    console.error('Erro ao carregar dados:', err)
+    error.value = 'Erro ao carregar dados. Tente novamente.'
+    // Garantir que atendimentos seja um array mesmo em caso de erro
+    atendimentos.value = []
+    pets.value = []
+  } finally {
+    loading.value = false
+  }
+}
 
 // Computed properties
 const atendimentosFuturos = computed(() => {
   const hoje = new Date()
-  return atendimentos.value.filter(a => new Date(a.data) > hoje)
+  return atendimentos.value.filter(a => new Date(a.data_hora) > hoje)
 })
 
 const atendimentosPassados = computed(() => {
   const hoje = new Date()
-  return atendimentos.value.filter(a => new Date(a.data) <= hoje)
+  return atendimentos.value.filter(a => new Date(a.data_hora) <= hoje)
 })
 
 const animaisUnicos = computed(() => {
-  const animaisIds = [...new Set(atendimentos.value.map(a => a.animal_id))]
-  return pets.value.filter(pet => animaisIds.includes(pet.id))
+  // Usar os pets reais da API
+  return pets.value
 })
 
 const filteredAtendimentos = computed(() => {
@@ -472,8 +487,10 @@ const filteredAtendimentos = computed(() => {
   if (searchTerm.value) {
     const term = searchTerm.value.toLowerCase()
     filtered = filtered.filter(atendimento => 
-      atendimento.servico.toLowerCase().includes(term) ||
-      atendimento.animal.toLowerCase().includes(term) ||
+      atendimento.servico_nome?.toLowerCase().includes(term) ||
+      atendimento.servico?.toLowerCase().includes(term) ||
+      (atendimento.animal_nome && atendimento.animal_nome.toLowerCase().includes(term)) ||
+      (atendimento.animal && atendimento.animal.toLowerCase().includes(term)) ||
       (atendimento.observacoes && atendimento.observacoes.toLowerCase().includes(term))
     )
   }
@@ -485,7 +502,7 @@ const filteredAtendimentos = computed(() => {
     const hojeFim = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 23, 59, 59)
     
     filtered = filtered.filter(atendimento => {
-      const dataAtendimento = new Date(atendimento.data)
+      const dataAtendimento = new Date(atendimento.data_hora)
       
       switch (periodoFilter.value) {
         case 'futuro':
@@ -499,8 +516,8 @@ const filteredAtendimentos = computed(() => {
           const fimSemana = new Date(inicioSemana.getTime() + (6 * 24 * 60 * 60 * 1000))
           return dataAtendimento >= inicioSemana && dataAtendimento <= fimSemana
         case 'mes':
-          const inicioMes = hoje.replace(day=1)
-          const fimMes = (inicioMes + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+          const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1)
+          const fimMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0, 23, 59, 59)
           return dataAtendimento >= inicioMes && dataAtendimento <= fimMes
         default:
           return true
@@ -510,7 +527,13 @@ const filteredAtendimentos = computed(() => {
   
   // Filtro por pet
   if (petFilter.value) {
-    filtered = filtered.filter(atendimento => atendimento.animal_id == petFilter.value)
+    const pet = pets.value.find(p => p.id == petFilter.value)
+    if (pet) {
+      filtered = filtered.filter(atendimento => 
+        (atendimento.animal_nome && atendimento.animal_nome === pet.nome) ||
+        (atendimento.animal && atendimento.animal === pet.nome)
+      )
+    }
   }
   
   // Filtro por status
@@ -519,7 +542,7 @@ const filteredAtendimentos = computed(() => {
   }
   
   // Ordenar por data (mais recentes primeiro)
-  filtered.sort((a, b) => new Date(b.data) - new Date(a.data))
+  filtered.sort((a, b) => new Date(b.data_hora) - new Date(a.data_hora))
   
   return filtered
 })
@@ -539,23 +562,41 @@ const cancelarAtendimento = (atendimento) => {
   showCancelarAtendimentoModal.value = true
 }
 
-const confirmarCancelamento = () => {
+const confirmarCancelamento = async () => {
   if (atendimentoSelecionado.value) {
-    const index = atendimentos.value.findIndex(a => a.id === atendimentoSelecionado.value.id)
-    if (index !== -1) {
-      atendimentos.value[index].status = 'cancelado'
+    try {
+      await authService.cancelarAgendamento(atendimentoSelecionado.value.id)
+      
+      // Atualizar o status localmente
+      const index = atendimentos.value.findIndex(a => a.id === atendimentoSelecionado.value.id)
+      if (index !== -1) {
+        atendimentos.value[index].status = 'cancelado'
+      }
+      
+      showCancelarAtendimentoModal.value = false
+      atendimentoSelecionado.value = null
+    } catch (err) {
+      console.error('Erro ao cancelar agendamento:', err)
+      error.value = 'Erro ao cancelar agendamento. Tente novamente.'
     }
-    showCancelarAtendimentoModal.value = false
-    atendimentoSelecionado.value = null
   }
 }
 
-const filterAtendimentos = () => {
-  // Os filtros são reativos, então não precisamos fazer nada aqui
+const handleAgendamentoCriado = (novoAgendamento) => {
+  showNovoAgendamentoModal.value = false
+  loadData() // Recarrega os dados para mostrar o novo agendamento
 }
+
 
 const formatarData = (data) => {
   return new Date(data).toLocaleDateString('pt-BR')
+}
+
+const formatarHora = (dataHora) => {
+  return new Date(dataHora).toLocaleTimeString('pt-BR', { 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  })
 }
 
 const getStatusColor = (status) => {
@@ -578,14 +619,14 @@ const getStatusText = (status) => {
   return texts[status] || status
 }
 
-const getPetSpecies = (animalId) => {
-  const pet = pets.value.find(p => p.id === animalId)
+const getPetSpecies = (animalNome) => {
+  const pet = pets.value.find(p => p.nome === animalNome)
   return pet ? pet.especie : ''
 }
 
-const getPeriodClass = (data) => {
+const getPeriodClass = (dataHora) => {
   const hoje = new Date()
-  const dataAtendimento = new Date(data)
+  const dataAtendimento = new Date(dataHora)
   
   if (dataAtendimento > hoje) {
     return 'is-info'
@@ -596,9 +637,9 @@ const getPeriodClass = (data) => {
   }
 }
 
-const getPeriodLabel = (data) => {
+const getPeriodLabel = (dataHora) => {
   const hoje = new Date()
-  const dataAtendimento = new Date(data)
+  const dataAtendimento = new Date(dataHora)
   
   if (dataAtendimento > hoje) {
     return 'Futuro'
@@ -773,6 +814,19 @@ const getPeriodLabel = (data) => {
   width: 95%;
   border-radius: 8px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+/* Modal de agendamento específico */
+.modal-card .agendamento-container {
+  min-height: auto;
+  padding: 0;
+  background: transparent;
+}
+
+.modal-card .agendamento-form {
+  box-shadow: none;
+  padding: 0;
+  background: transparent;
 }
 
 .modal-card-foot {

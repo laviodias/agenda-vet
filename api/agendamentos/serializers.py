@@ -10,7 +10,7 @@ class DisponibilidadeAgendaSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = DisponibilidadeAgenda
-        fields = ['id', 'data', 'hora_inicio', 'hora_fim', 'servico_nome', 'responsavel_nome', 'servico', 'responsavel']
+        fields = ['id', 'data', 'hora_inicio', 'hora_fim', 'servico_nome', 'responsavel_nome', 'servico', 'responsavel', 'empresa']
 
 class AgendamentoSerializer(serializers.ModelSerializer):
     servico_nome = serializers.CharField(source='servico.nome', read_only=True)
@@ -23,8 +23,8 @@ class AgendamentoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Agendamento
         fields = [
-            'id', 'data_hora', 'observacoes', 'servico_nome', 'servico_preco',
+            'id', 'data_hora', 'observacoes', 'status', 'servico_nome', 'servico_preco',
             'animal_nome', 'animal_especie', 'cliente_nome', 'responsavel_nome',
-            'servico', 'animal', 'cliente', 'responsavel'
+            'servico', 'animal', 'cliente', 'responsavel', 'empresa'
         ]
-        read_only_fields = ['id', 'cliente'] 
+        read_only_fields = ['id'] 

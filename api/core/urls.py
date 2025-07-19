@@ -39,4 +39,10 @@ urlpatterns = [
     path('admin/animais/stats/', views.get_animal_stats, name='get_animal_stats'),  # GET - estatísticas de animais
     path('admin/animais/<int:animal_id>/detail/', views.get_animal_detail, name='get_animal_detail'),  # GET - detalhes do animal
     path('admin/animais/<int:animal_id>/agendamentos/', views.get_animal_agendamentos, name='get_animal_agendamentos'),  # GET - agendamentos do animal
+    
+    # URLs para gestão de serviços
+    path('admin/servicos/', views.get_servicos_admin, name='get_servicos_admin'),  # GET - listar serviços
+    path('admin/servicos/create/', views.create_servico_admin, name='create_servico_admin'),  # POST - criar serviço
+    path('admin/servicos/<int:servico_id>/', views.update_servico_admin, name='update_servico_admin'),  # PUT - atualizar serviço
+    path('admin/servicos/<int:servico_id>/delete/', views.delete_servico_admin, name='delete_servico_admin'),  # DELETE - excluir serviço
 ] 

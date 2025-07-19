@@ -28,31 +28,24 @@ def listar_pets(request):
 
 
 @api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
 def criar_pet(request):
     """
     Cria um novo pet para o usuário logado
     """
     try:
         data = request.data.copy()
-        data['dono'] = request.user.id
         
-        # Buscar empresa padrão
-        from core.models import Empresa
-        empresa_padrao, created = Empresa.objects.get_or_create(
-            nome='Clínica Veterinária Padrão',
-            defaults={
-                'cnpj': '00.000.000/0001-00',
-                'endereco': 'Endereço padrão',
-                'telefone': '(11) 99999-9999'
-            }
-        )
-        data['empresa'] = empresa_padrao.id
+        # Garantir que o dono seja o usuário logado
+        data['dono'] = request.user.id
+        data['empresa'] = 1
         
         serializer = AnimalSerializer(data=data)
         if serializer.is_valid():
             pet = serializer.save()
             return Response(AnimalSerializer(pet).data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
     except Exception as e:
         return Response({
@@ -68,7 +61,12 @@ def atualizar_pet(request, pet_id):
     """
     try:
         pet = Animal.objects.get(id=pet_id, dono=request.user)
-        serializer = AnimalSerializer(pet, data=request.data, partial=True)
+        
+        # Garantir que a empresa seja sempre a mesma
+        data = request.data.copy()
+        data['empresa'] = 1
+        
+        serializer = AnimalSerializer(pet, data=data, partial=True)
         if serializer.is_valid():
             pet = serializer.save()
             return Response(AnimalSerializer(pet).data)

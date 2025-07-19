@@ -42,14 +42,12 @@ const carregarDados = async () => {
   try {
     loading.value = true
     
-    // Carregar dados em paralelo
     const [statsData, agendamentosData, agendamentosRecentesData] = await Promise.all([
       adminService.getDashboardStats(),
       adminService.getAllAgendamentos(),
       adminService.getAgendamentosRecentes()
     ])
 
-    // Atualizar estatísticas
     estatisticas.value = {
       totalAgendamentos: statsData.totalAgendamentos,
       agendamentosHoje: statsData.agendamentosHoje,
@@ -58,13 +56,22 @@ const carregarDados = async () => {
       clientesAtivos: statsData.clientesAtivos
     }
 
-    // Atualizar agendamentos
-    agendamentos.value = agendamentosData || []
-    agendamentosRecentes.value = agendamentosRecentesData || []
-    servicosPopulares.value = statsData.servicosPopulares || []
+    agendamentos.value = Array.isArray(agendamentosData) ? agendamentosData : []
+    agendamentosRecentes.value = Array.isArray(agendamentosRecentesData) ? agendamentosRecentesData : []
+    servicosPopulares.value = Array.isArray(statsData.servicosPopulares) ? statsData.servicosPopulares : []
 
   } catch (error) {
     console.error('Erro ao carregar dados do dashboard:', error)
+    agendamentos.value = []
+    agendamentosRecentes.value = []
+    servicosPopulares.value = []
+    estatisticas.value = {
+      totalAgendamentos: 0,
+      agendamentosHoje: 0,
+      agendamentosPendentes: 0,
+      faturamentoMes: 0,
+      clientesAtivos: 0
+    }
   } finally {
     loading.value = false
     loadingStats.value = false
@@ -214,29 +221,29 @@ onMounted(() => {
             class="appointment-item"
           >
             <div class="appointment-time">
-              <div class="time">{{ formatarHora(agendamento.data_hora || agendamento.horario) }}</div>
-              <div class="date">{{ formatarData(agendamento.data_hora || agendamento.data) }}</div>
+              <div class="time">{{ formatarHora(agendamento.data_hora) }}</div>
+              <div class="date">{{ formatarData(agendamento.data_hora) }}</div>
             </div>
             
             <div class="appointment-info">
               <div class="appointment-main">
-                <strong>{{ agendamento.servico?.nome || agendamento.servico }}</strong>
-                <span class="price">{{ formatarMoeda(agendamento.servico?.preco || agendamento.preco) }}</span>
+                <strong>{{ agendamento.servico }}</strong>
+                <span class="price">{{ formatarMoeda(agendamento.preco) }}</span>
               </div>
               
               <div class="appointment-details">
                 <span class="professional">
                   <i class="fas fa-user-md"></i>
-                  {{ agendamento.responsavel?.nome || agendamento.profissional }}
+                  {{ agendamento.profissional }}
                 </span>
                 <span class="animal">
                   <i class="fas fa-paw"></i>
-                  {{ agendamento.animal?.nome || agendamento.pet }} 
-                  ({{ agendamento.animal?.especie || 'N/A' }})
+                  {{ agendamento.pet_nome }} 
+                  ({{ agendamento.pet_especie || 'N/A' }})
                 </span>
                 <span class="client">
                   <i class="fas fa-user"></i>
-                  {{ agendamento.cliente?.nome || agendamento.cliente }}
+                  {{ agendamento.cliente }}
                 </span>
               </div>
               

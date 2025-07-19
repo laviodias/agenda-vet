@@ -21,6 +21,13 @@ class DisponibilidadeAgenda(models.Model):
     return f"{self.servico.nome} disponível em {self.data} das {self.hora_inicio} às {self.hora_fim}"
     
 class Agendamento(models.Model):
+  STATUS_CHOICES = [
+    ('pendente', 'Pendente'),
+    ('confirmado', 'Confirmado'),
+    ('realizado', 'Realizado'),
+    ('cancelado', 'Cancelado'),
+  ]
+  
   empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='agendamentos')
   animal = models.ForeignKey(Animal, on_delete=models.CASCADE, related_name='agendamentos')
   servico = models.ForeignKey(Servico, on_delete=models.CASCADE, related_name='agendamentos')
@@ -28,6 +35,7 @@ class Agendamento(models.Model):
   observacoes = models.TextField(blank=True, null=True)
   cliente = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='agendamentos_cliente')
   responsavel = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='agendamentos_responsavel')
+  status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pendente')
 
   def __str__(self):
     return f"Agendamento de {self.animal.nome} para {self.servico.nome} em {self.data_hora}"

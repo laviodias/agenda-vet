@@ -322,7 +322,8 @@ def agendamentos_recentes(request):
                 'data_hora': agendamento.data_hora.isoformat(),
                 'servico': agendamento.servico.nome,
                 'preco': float(agendamento.servico.preco),
-                'pet': agendamento.animal.nome,
+                'pet_nome': agendamento.animal.nome,
+                'pet_especie': agendamento.animal.especie,
                 'cliente': agendamento.cliente.nome,
                 'profissional': agendamento.responsavel.nome if agendamento.responsavel else 'Não definido',
                 'observacoes': agendamento.observacoes or '',
@@ -1096,9 +1097,14 @@ def create_animal(request):
         data = request.data
         cliente = Usuario.objects.get(id=data['cliente_id'], tipo='cliente')
         
+        # Usar empresa com ID 1 fixo
+        from core.models import Empresa
+        empresa = Empresa.objects.get(id=1)
+        
         animal = Animal.objects.create(
             nome=data['nome'],
             dono=cliente,  # Usando 'dono' em vez de 'cliente'
+            empresa=empresa,  # Usando empresa fixa
             especie=data['especie'],
             raca=data.get('raca', ''),
             data_nascimento=data.get('data_nascimento'),
@@ -1113,6 +1119,8 @@ def create_animal(request):
         })
     except Usuario.DoesNotExist:
         return Response({'error': 'Cliente não encontrado'}, status=404)
+    except Empresa.DoesNotExist:
+        return Response({'error': 'Empresa não encontrada'}, status=404)
     except Exception as e:
         return Response({'error': str(e)}, status=400)
 
@@ -1137,6 +1145,12 @@ def update_animal(request, animal_id):
             cliente = Usuario.objects.get(id=data['cliente_id'], tipo='cliente')
             animal.dono = cliente  # Usando 'dono' em vez de 'cliente'
         
+        # Se não tiver empresa, usar empresa com ID 1
+        if not animal.empresa:
+            from core.models import Empresa
+            empresa = Empresa.objects.get(id=1)
+            animal.empresa = empresa
+        
         animal.save()
         
         return Response({'message': 'Animal atualizado com sucesso'})
@@ -1144,6 +1158,8 @@ def update_animal(request, animal_id):
         return Response({'error': 'Animal não encontrado'}, status=404)
     except Usuario.DoesNotExist:
         return Response({'error': 'Cliente não encontrado'}, status=404)
+    except Empresa.DoesNotExist:
+        return Response({'error': 'Empresa não encontrada'}, status=404)
     except Exception as e:
         return Response({'error': str(e)}, status=400)
 
@@ -1349,6 +1365,98 @@ def get_animal_agendamentos(request, animal_id):
         return Response({'error': 'Animal não encontrado'}, status=404)
     except Exception as e:
         return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@require_permission('servicos', 'read')
+def get_servicos_admin(request):
+    """Buscar serviços para admin"""
+    try:
+        servicos = Servico.objects.all().order_by('nome')
+        data = []
+        for servico in servicos:
+            data.append({
+                'id': servico.id,
+                'nome': servico.nome,
+                'descricao': servico.descricao,
+                'duracao': servico.duracao,
+                'preco': servico.preco
+            })
+        return Response(data)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@require_permission('servicos', 'create')
+def create_servico_admin(request):
+    """Criar novo serviço para admin"""
+    try:
+        data = request.data
+        
+        # Usar empresa com ID 1 fixo
+        from core.models import Empresa
+        empresa = Empresa.objects.get(id=1)
+        
+        servico = Servico.objects.create(
+            nome=data['nome'],
+            descricao=data.get('descricao', ''),
+            duracao=data.get('duracao', 60),  # 60 minutos padrão
+            preco=data.get('preco', 0.00),
+            empresa=empresa  # Adicionando empresa
+        )
+        
+        return Response({
+            'id': servico.id,
+            'nome': servico.nome,
+            'message': 'Serviço criado com sucesso'
+        })
+    except Empresa.DoesNotExist:
+        return Response({'error': 'Empresa não encontrada'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+@require_permission('servicos', 'update')
+def update_servico_admin(request, servico_id):
+    """Atualizar serviço para admin"""
+    try:
+        servico = Servico.objects.get(id=servico_id)
+        data = request.data
+        
+        servico.nome = data.get('nome', servico.nome)
+        servico.descricao = data.get('descricao', servico.descricao)
+        servico.duracao = data.get('duracao', servico.duracao)
+        servico.preco = data.get('preco', servico.preco)
+        
+        servico.save()
+        
+        return Response({'message': 'Serviço atualizado com sucesso'})
+    except Servico.DoesNotExist:
+        return Response({'error': 'Serviço não encontrado'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+@require_permission('servicos', 'delete')
+def delete_servico_admin(request, servico_id):
+    """Excluir serviço para admin"""
+    try:
+        servico = Servico.objects.get(id=servico_id)
+        servico.delete()
+        
+        return Response({'message': 'Serviço excluído com sucesso'})
+    except Servico.DoesNotExist:
+        return Response({'error': 'Serviço não encontrado'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)
+
 
 
 

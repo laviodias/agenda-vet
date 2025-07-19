@@ -31,7 +31,7 @@ class Usuario(AbstractUser):
   )
 
   def __str__(self):
-    return self.username
+    return self.nome or self.email or self.username
 
   def has_role(self, role_name):
     from core.models import UserRole  # Import local para evitar import circular

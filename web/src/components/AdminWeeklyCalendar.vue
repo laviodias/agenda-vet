@@ -30,15 +30,29 @@ const weekDaysArray = computed(() => {
 
 const agendamentosPorDia = computed(() => {
   const agendamentosPorDia = {}
+
+  // Garantir que agendamentos seja sempre um array e filtrar apenas agendamentos válidos
+  const agendamentos = Array.isArray(props.agendamentos) 
+    ? props.agendamentos.filter(agendamento => 
+        agendamento && 
+        agendamento.data_hora && 
+        agendamento.id
+      )
+    : []
   
   weekDaysArray.value.forEach(day => {
     const dayKey = day.toISOString().split('T')[0]
-    agendamentosPorDia[dayKey] = props.agendamentos.filter(agendamento => {
-      const agendamentoDate = new Date(agendamento.data_hora).toISOString().split('T')[0]
-      return agendamentoDate === dayKey
+    agendamentosPorDia[dayKey] = agendamentos.filter(agendamento => {
+      try {
+        const agendamentoDate = new Date(agendamento.data_hora).toISOString().split('T')[0]
+        return agendamentoDate === dayKey
+      } catch (error) {
+        console.warn('Data inválida para agendamento:', agendamento)
+        return false
+      }
     })
   })
-  
+
   return agendamentosPorDia
 })
 
@@ -149,27 +163,27 @@ const isWeekend = (date) => {
             
             <div class="appointment-details">
               <div class="appointment-service">
-                <strong>{{ agendamento.servico.nome }}</strong>
+                <strong>{{ agendamento.servico_nome }}</strong>
               </div>
               
               <div class="appointment-professional">
                 <i class="fas fa-user-md"></i>
-                {{ agendamento.responsavel?.nome || 'Não atribuído' }}
+                {{ agendamento.responsavel_nome || 'Não atribuído' }}
               </div>
               
               <div class="appointment-animal">
                 <i class="fas fa-paw"></i>
-                {{ agendamento.animal.nome }} ({{ agendamento.animal.especie }})
+                {{ agendamento.animal_nome }} ({{ agendamento.animal_especie }})
               </div>
               
               <div class="appointment-owner">
                 <i class="fas fa-user"></i>
-                {{ agendamento.cliente.nome }}
+                {{ agendamento.cliente_nome }}
               </div>
               
               <div class="appointment-price">
                 <i class="fas fa-dollar-sign"></i>
-                {{ formatPrice(agendamento.servico.preco) }}
+                {{ formatPrice(agendamento.servico_preco) }}
               </div>
               
               <div v-if="agendamento.observacoes" class="appointment-notes">

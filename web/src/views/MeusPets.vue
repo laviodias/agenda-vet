@@ -2,33 +2,20 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useBrand } from '../composables/useBrand.js'
+import authService from '../services/authService.js'
+import AgendamentoForm from '../components/AgendamentoForm.vue'
 
 const router = useRouter()
 const { brandConfig } = useBrand()
 
-const animais = ref([
-  {
-    id: 1,
-    nome: 'Rex',
-    especie: 'Cão',
-    raca: 'Labrador',
-    data_nascimento: '2022-03-15',
-    peso: '25 kg',
-    observacoes: 'Alérgico a alguns alimentos'
-  },
-  {
-    id: 2,
-    nome: 'Luna',
-    especie: 'Gato',
-    raca: 'Persa',
-    data_nascimento: '2023-01-20',
-    peso: '4 kg',
-    observacoes: 'Gosta de brincar com bolinhas'
-  }
-])
+const animais = ref([])
+const loading = ref(false)
+const error = ref(null)
+const success = ref(null)
 
 const showAdicionarPetForm = ref(false)
 const showEditarPetForm = ref(false)
+const showAgendamentoForm = ref(false)
 const petSelecionado = ref(null)
 const novoPet = ref({
   nome: '',
@@ -43,24 +30,75 @@ const especies = [
   'Cão', 'Gato', 'Ave', 'Réptil', 'Peixe', 'Hamster', 'Coelho', 'Outro'
 ]
 
-const adicionarPet = () => {
-  const pet = {
-    id: Date.now(), // ID temporário
-    ...novoPet.value
+// Carregar dados na montagem do componente
+onMounted(async () => {
+  await loadAnimais()
+})
+
+// Função para carregar animais da API
+const loadAnimais = async () => {
+  try {
+    loading.value = true
+    error.value = null
+    
+    const animaisData = await authService.getPets()
+    animais.value = Array.isArray(animaisData) ? animaisData : []
+    
+  } catch (err) {
+    console.error('Erro ao carregar animais:', err)
+    error.value = 'Erro ao carregar animais. Tente novamente.'
+    animais.value = []
+  } finally {
+    loading.value = false
   }
-  animais.value.push(pet)
-  
-  // Limpar formulário
-  novoPet.value = {
-    nome: '',
-    especie: 'Cão',
-    raca: '',
-    data_nascimento: '',
-    peso: '',
-    observacoes: ''
+}
+
+const adicionarPet = async () => {
+  try {
+    // Validar dados obrigatórios
+    if (!novoPet.value.nome || !novoPet.value.especie) {
+      error.value = 'Nome e espécie são obrigatórios'
+      return
+    }
+
+    // Preparar dados para a API
+    const petData = {
+      nome: novoPet.value.nome,
+      especie: novoPet.value.especie,
+      raca: novoPet.value.raca || '',
+      data_nascimento: novoPet.value.data_nascimento || null,
+      peso: novoPet.value.peso || '',
+      observacoes: novoPet.value.observacoes || ''
+    }
+
+    // Chamar API para criar pet
+    const novoPetCriado = await authService.createPet(petData)
+    
+    // Adicionar à lista local
+    animais.value.push(novoPetCriado)
+    
+    // Limpar formulário
+    novoPet.value = {
+      nome: '',
+      especie: 'Cão',
+      raca: '',
+      data_nascimento: '',
+      peso: '',
+      observacoes: ''
+    }
+    
+    showAdicionarPetForm.value = false
+    error.value = null
+    success.value = 'Pet adicionado com sucesso!'
+    
+    // Limpar mensagem de sucesso após 3 segundos
+    setTimeout(() => {
+      success.value = null
+    }, 3000)
+  } catch (err) {
+    console.error('Erro ao adicionar pet:', err)
+    error.value = 'Erro ao adicionar pet. Tente novamente.'
   }
-  
-  showAdicionarPetForm.value = false
 }
 
 const editarPet = (animal) => {
@@ -68,18 +106,67 @@ const editarPet = (animal) => {
   showEditarPetForm.value = true
 }
 
-const salvarPet = () => {
-  const index = animais.value.findIndex(a => a.id === petSelecionado.value.id)
-  if (index !== -1) {
-    animais.value[index] = { ...petSelecionado.value }
+const salvarPet = async () => {
+  try {
+    // Validar dados obrigatórios
+    if (!petSelecionado.value.nome || !petSelecionado.value.especie) {
+      error.value = 'Nome e espécie são obrigatórios'
+      return
+    }
+
+    // Preparar dados para a API
+    const petData = {
+      nome: petSelecionado.value.nome,
+      especie: petSelecionado.value.especie,
+      raca: petSelecionado.value.raca || '',
+      data_nascimento: petSelecionado.value.data_nascimento || null,
+      peso: petSelecionado.value.peso || '',
+      observacoes: petSelecionado.value.observacoes || ''
+    }
+
+    // Chamar API para atualizar pet
+    const petAtualizado = await authService.updatePet(petSelecionado.value.id, petData)
+    
+    // Atualizar na lista local
+    const index = animais.value.findIndex(a => a.id === petSelecionado.value.id)
+    if (index !== -1) {
+      animais.value[index] = petAtualizado
+    }
+    
+    showEditarPetForm.value = false
+    petSelecionado.value = null
+    error.value = null
+    success.value = 'Pet atualizado com sucesso!'
+    
+    // Limpar mensagem de sucesso após 3 segundos
+    setTimeout(() => {
+      success.value = null
+    }, 3000)
+  } catch (err) {
+    console.error('Erro ao salvar pet:', err)
+    error.value = 'Erro ao salvar pet. Tente novamente.'
   }
-  showEditarPetForm.value = false
-  petSelecionado.value = null
 }
 
-const removerPet = (id) => {
+const removerPet = async (id) => {
   if (confirm('Tem certeza que deseja remover este pet?')) {
-    animais.value = animais.value.filter(a => a.id !== id)
+    try {
+      // Chamar API para deletar pet
+      await authService.deletePet(id)
+      
+      // Remover da lista local
+      animais.value = animais.value.filter(a => a.id !== id)
+      error.value = null
+      success.value = 'Pet removido com sucesso!'
+      
+      // Limpar mensagem de sucesso após 3 segundos
+      setTimeout(() => {
+        success.value = null
+      }, 3000)
+    } catch (err) {
+      console.error('Erro ao remover pet:', err)
+      error.value = 'Erro ao remover pet. Tente novamente.'
+    }
   }
 }
 
@@ -105,8 +192,19 @@ const voltar = () => {
 }
 
 const agendarParaPet = (animal) => {
-  // Navegar para o dashboard com o pet selecionado para agendamento
-  router.push({ path: '/cliente', query: { agendarPet: animal.id } })
+  petSelecionado.value = animal
+  showAgendamentoForm.value = true
+}
+
+const fecharModalAgendamento = () => {
+  showAgendamentoForm.value = false
+  petSelecionado.value = null
+}
+
+const handleAgendamentoCriado = (agendamento) => {
+  console.log('Agendamento criado:', agendamento)
+  // Aqui você pode adicionar lógica adicional, como mostrar uma mensagem de sucesso
+  fecharModalAgendamento()
 }
 
 const calcularIdade = (dataNascimento) => {
@@ -188,76 +286,110 @@ const calcularIdade = (dataNascimento) => {
         </div>
       </div>
 
+      <!-- Mensagens de feedback -->
+      <div v-if="error" class="notification is-danger is-light mb-4">
+        <button class="delete" @click="error = null"></button>
+        {{ error }}
+      </div>
+
+      <div v-if="success" class="notification is-success is-light mb-4">
+        <button class="delete" @click="success = null"></button>
+        {{ success }}
+      </div>
+
       <!-- Lista de Pets -->
-      <div class="columns is-multiline">
-        <div 
-          v-for="animal in animais" 
-          :key="animal.id"
-          class="column is-4"
-        >
-          <div class="card pet-card">
-            <div class="card-content">
-              <div class="media">
-                <div class="media-left">
-                  <div class="pet-avatar">
-                    <i class="fas fa-paw"></i>
-                  </div>
-                </div>
-                <div class="media-content">
-                  <p class="title is-4">{{ animal.nome }}</p>
-                  <p class="subtitle is-6">{{ animal.especie }} - {{ animal.raca }}</p>
-                  <p class="help">{{ calcularIdade(animal.data_nascimento) }} • {{ animal.peso }}</p>
-                  <p v-if="animal.observacoes" class="help mt-2">
-                    <strong>Observações:</strong> {{ animal.observacoes }}
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <footer class="card-footer">
-              <a class="card-footer-item" @click="editarPet(animal)">
-                <span class="icon">
-                  <i class="fas fa-edit"></i>
-                </span>
-                <span>Editar</span>
-              </a>
-              <a class="card-footer-item" @click="agendarParaPet(animal)">
-                <span class="icon">
-                  <i class="fas fa-calendar-plus"></i>
-                </span>
-                <span>Agendar</span>
-              </a>
-              <a 
-                class="card-footer-item has-text-danger" 
-                @click="removerPet(animal.id)"
-              >
-                <span class="icon">
-                  <i class="fas fa-trash"></i>
-                </span>
-                <span>Remover</span>
-              </a>
-            </footer>
-          </div>
+      <div v-if="loading" class="loading-state">
+        <div class="has-text-centered">
+          <span class="icon is-large">
+            <i class="fas fa-spinner fa-spin"></i>
+          </span>
+          <p class="mt-3">Carregando pets...</p>
         </div>
       </div>
 
-      <!-- Mensagem quando não há pets -->
-      <div v-if="!animais.length" class="has-text-centered mt-6">
-        <div class="empty-state">
-          <span class="icon is-large">
-            <i class="fas fa-paw"></i>
+      <div v-else-if="error" class="error-state">
+        <div class="has-text-centered">
+          <span class="icon is-large has-text-danger">
+            <i class="fas fa-exclamation-triangle"></i>
           </span>
-          <h3 class="title is-4 mt-4">Nenhum pet cadastrado</h3>
-          <p class="subtitle is-6">Adicione seu primeiro pet para começar a agendar consultas</p>
-          <button 
-            class="button is-primary mt-4"
-            @click="showAdicionarPetForm = true"
-          >
-            <span class="icon">
-              <i class="fas fa-plus"></i>
-            </span>
-            <span>Adicionar Primeiro Pet</span>
+          <p class="mt-3">{{ error }}</p>
+          <button class="button is-primary mt-3" @click="loadAnimais">
+            Tentar Novamente
           </button>
+        </div>
+      </div>
+
+      <div v-else>
+        <div class="columns is-multiline">
+          <div 
+            v-for="animal in animais" 
+            :key="animal.id"
+            class="column is-4"
+          >
+            <div class="card pet-card">
+              <div class="card-content">
+                <div class="media">
+                  <div class="media-left">
+                    <div class="pet-avatar">
+                      <i class="fas fa-paw"></i>
+                    </div>
+                  </div>
+                  <div class="media-content">
+                    <p class="title is-4">{{ animal.nome }}</p>
+                    <p class="subtitle is-6">{{ animal.especie }} - {{ animal.raca }}</p>
+                    <p class="help">{{ calcularIdade(animal.data_nascimento) }} • {{ animal.peso }}</p>
+                    <p v-if="animal.observacoes" class="help mt-2">
+                      <strong>Observações:</strong> {{ animal.observacoes }}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <footer class="card-footer">
+                <a class="card-footer-item" @click="editarPet(animal)">
+                  <span class="icon">
+                    <i class="fas fa-edit"></i>
+                  </span>
+                  <span>Editar</span>
+                </a>
+                <a class="card-footer-item" @click="agendarParaPet(animal)">
+                  <span class="icon">
+                    <i class="fas fa-calendar-plus"></i>
+                  </span>
+                  <span>Agendar</span>
+                </a>
+                <a 
+                  class="card-footer-item has-text-danger" 
+                  @click="removerPet(animal.id)"
+                >
+                  <span class="icon">
+                    <i class="fas fa-trash"></i>
+                  </span>
+                  <span>Remover</span>
+                </a>
+              </footer>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mensagem quando não há pets -->
+        <div v-if="!loading && !error && !animais.length" class="has-text-centered mt-6">
+          <div class="empty-state">
+            <span class="icon is-large">
+              <i class="fas fa-paw"></i>
+            </span>
+            <h3 class="title is-4 mt-4">Nenhum pet cadastrado</h3>
+            <p class="subtitle is-6">Adicione seu primeiro pet para começar a agendar consultas</p>
+            <button 
+              class="button is-primary mt-4"
+              @click="showAdicionarPetForm = true"
+            >
+              <span class="icon">
+                <i class="fas fa-plus"></i>
+              </span>
+              <span>Adicionar Primeiro Pet</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -469,6 +601,29 @@ const calcularIdade = (dataNascimento) => {
         </footer>
       </div>
     </div>
+
+    <!-- Modal de Agendamento -->
+    <div v-if="showAgendamentoForm" class="modal is-active">
+      <div class="modal-background" @click="fecharModalAgendamento"></div>
+      <div class="modal-card">
+        <header class="modal-card-head">
+          <p class="modal-card-title">Agendar Atendimento para {{ petSelecionado?.nome }}</p>
+          <button 
+            class="delete" 
+            aria-label="close"
+            @click="fecharModalAgendamento"
+          ></button>
+        </header>
+        <section class="modal-card-body">
+          <AgendamentoForm
+            :petSelecionado="petSelecionado"
+            :pets="animais"
+            @close="fecharModalAgendamento"
+            @agendamentoCriado="handleAgendamentoCriado"
+          />
+        </section>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -533,7 +688,7 @@ const calcularIdade = (dataNascimento) => {
 
 .empty-state .icon {
   color: #dee2e6;
-  font-size: 4rem;
+  font-size: 1rem;
 }
 
 .modal-card {
@@ -623,6 +778,33 @@ const calcularIdade = (dataNascimento) => {
 
 .navbar-item:hover {
   background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.loading-state, .error-state {
+  padding: 4rem 0;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.loading-state .icon, .error-state .icon {
+  color: #e9ecef;
+  font-size: 4rem;
+}
+
+.loading-state p, .error-state p {
+  color: #6c757d;
+  font-size: 1.1rem;
+}
+
+.loading-state .button, .error-state .button {
+  background-color: #007bff;
+  border-color: #007bff;
+}
+
+.loading-state .button:hover, .error-state .button:hover {
+  background-color: #0056b3;
+  border-color: #0056b3;
 }
 
 @media (max-width: 768px) {

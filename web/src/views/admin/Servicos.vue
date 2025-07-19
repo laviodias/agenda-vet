@@ -1,24 +1,11 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import authService from '../../services/authService.js'
 
-const servicos = ref([
-  { 
-    id: 1, 
-    nome: 'Consulta Clínica', 
-    descricao: 'Consulta veterinária de rotina', 
-    duracao: 30,
-    preco: 150.00,
-    especialidades: ['Clínico Geral']
-  },
-  { 
-    id: 2, 
-    nome: 'Banho e Tosa', 
-    descricao: 'Serviço completo de higiene e tosa', 
-    duracao: 60,
-    preco: 80.00,
-    especialidades: []
-  }
-])
+const servicos = ref([])
+const loading = ref(false)
+const error = ref(null)
+const submitting = ref(false)
 
 const novoServico = ref({
   nome: '',
@@ -34,33 +21,81 @@ const especialidades = [
   'Ortopedia',
   'Cardiologia',
   'Oftalmologia',
-  'Odontologia'
+  'Odontologia',
+  'Cirurgia',
+  'Anestesiologia'
 ]
 
-const adicionarServico = () => {
-  if (!novoServico.value.nome || !novoServico.value.descricao || !novoServico.value.preco) {
-    alert('Por favor, preencha todos os campos obrigatórios')
-    return
-  }
-
-  servicos.value.push({
-    id: servicos.value.length + 1,
-    ...novoServico.value,
-    preco: parseFloat(novoServico.value.preco)
-  })
-
-  novoServico.value = {
-    nome: '',
-    descricao: '',
-    duracao: 30,
-    preco: '',
-    especialidades: []
+// Carregar serviços
+const loadServicos = async () => {
+  try {
+    loading.value = true
+    error.value = null
+    
+    const data = await authService.getServicos()
+    servicos.value = Array.isArray(data) ? data : []
+    
+  } catch (err) {
+    console.error('Erro ao carregar serviços:', err)
+    error.value = 'Erro ao carregar serviços. Tente novamente.'
+  } finally {
+    loading.value = false
   }
 }
 
-const removerServico = (id) => {
-  if (confirm('Tem certeza que deseja remover este serviço?')) {
-    servicos.value = servicos.value.filter(s => s.id !== id)
+// Adicionar serviço
+const adicionarServico = async () => {
+  try {
+    if (!novoServico.value.nome || !novoServico.value.descricao || !novoServico.value.preco) {
+      error.value = 'Por favor, preencha todos os campos obrigatórios'
+      return
+    }
+
+    submitting.value = true
+    error.value = null
+
+    const servicoData = {
+      nome: novoServico.value.nome,
+      descricao: novoServico.value.descricao,
+      duracao: parseInt(novoServico.value.duracao),
+      preco: parseFloat(novoServico.value.preco),
+      especialidades: novoServico.value.especialidades.join(',') || ''
+    }
+
+    await authService.createServico(servicoData)
+    
+    // Recarregar lista
+    await loadServicos()
+    
+    // Limpar formulário
+    novoServico.value = {
+      nome: '',
+      descricao: '',
+      duracao: 30,
+      preco: '',
+      especialidades: []
+    }
+    
+  } catch (err) {
+    console.error('Erro ao adicionar serviço:', err)
+    error.value = 'Erro ao adicionar serviço. Tente novamente.'
+  } finally {
+    submitting.value = false
+  }
+}
+
+// Remover serviço
+const removerServico = async (id) => {
+  if (!confirm('Tem certeza que deseja remover este serviço?')) {
+    return
+  }
+
+  try {
+    await authService.deleteServico(id)
+    await loadServicos()
+  } catch (err) {
+    console.error('Erro ao remover serviço:', err)
+    error.value = 'Erro ao remover serviço. Tente novamente.'
   }
 }
 
@@ -79,11 +114,22 @@ const formatarDuracao = (minutos) => {
   const mins = minutos % 60
   return mins > 0 ? `${horas}h ${mins}min` : `${horas}h`
 }
+
+// Carregar dados na montagem
+onMounted(() => {
+  loadServicos()
+})
 </script>
 
 <template>
   <div class="servicos-container">
     <h1 class="title is-2 mb-4">Gerenciamento de Serviços</h1>
+
+    <!-- Error state -->
+    <div v-if="error" class="notification is-danger is-light mb-4">
+      <button class="delete" @click="error = null"></button>
+      {{ error }}
+    </div>
 
     <div class="box mb-6">
       <h2 class="title is-4 mb-4">Novo Serviço</h2>
@@ -180,11 +226,15 @@ const formatarDuracao = (minutos) => {
               <button 
                 @click="adicionarServico"
                 class="button is-primary is-fullwidth"
+                :disabled="submitting"
               >
-                <span class="icon">
+                <span v-if="submitting" class="icon">
+                  <i class="fas fa-spinner fa-spin"></i>
+                </span>
+                <span v-else class="icon">
                   <i class="fas fa-plus"></i>
                 </span>
-                <span>Adicionar Serviço</span>
+                <span>{{ submitting ? 'Adicionando...' : 'Adicionar Serviço' }}</span>
               </button>
             </div>
           </div>
@@ -194,7 +244,17 @@ const formatarDuracao = (minutos) => {
 
     <div class="box">
       <h2 class="title is-4 mb-4">Serviços Cadastrados</h2>
-      <div class="table-container">
+      
+      <!-- Loading state -->
+      <div v-if="loading" class="has-text-centered">
+        <span class="icon is-large">
+          <i class="fas fa-spinner fa-spin"></i>
+        </span>
+        <p class="mt-3">Carregando serviços...</p>
+      </div>
+
+      <!-- Table -->
+      <div v-else class="table-container">
         <table class="table is-fullwidth is-striped">
           <thead>
             <tr>
@@ -213,18 +273,16 @@ const formatarDuracao = (minutos) => {
               <td>{{ formatarDuracao(servico.duracao) }}</td>
               <td>{{ formatarPreco(servico.preco) }}</td>
               <td>
-                <div class="tags">
+                <span v-if="servico.especialidades" class="tags">
                   <span 
-                    v-for="esp in servico.especialidades" 
-                    :key="esp"
+                    v-for="esp in servico.especialidades.split(',')" 
+                    :key="esp" 
                     class="tag is-info is-light"
                   >
-                    {{ esp }}
+                    {{ esp.trim() }}
                   </span>
-                  <span v-if="!servico.especialidades.length" class="tag is-light">
-                    Nenhuma
-                  </span>
-                </div>
+                </span>
+                <span v-else class="has-text-grey-light">Nenhuma</span>
               </td>
               <td>
                 <div class="buttons are-small">
@@ -246,6 +304,14 @@ const formatarDuracao = (minutos) => {
             </tr>
           </tbody>
         </table>
+        
+        <!-- Empty state -->
+        <div v-if="servicos.length === 0" class="has-text-centered py-6">
+          <span class="icon is-large has-text-grey-light">
+            <i class="fas fa-clipboard-list"></i>
+          </span>
+          <p class="mt-3 has-text-grey">Nenhum serviço cadastrado</p>
+        </div>
       </div>
     </div>
   </div>

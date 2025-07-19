@@ -16,6 +16,20 @@
       </button>
     </div>
 
+    <!-- Loading state -->
+    <div v-if="loading" class="has-text-centered mb-4">
+      <span class="icon">
+        <i class="fas fa-spinner fa-spin"></i>
+      </span>
+      <p class="mt-2">Carregando horários...</p>
+    </div>
+
+    <!-- Error state -->
+    <div v-else-if="error" class="notification is-warning is-light mb-4">
+      <button class="delete" @click="error = null"></button>
+      {{ error }}
+    </div>
+
     <div class="calendar-container">
       <div class="calendar-grid">
         <div class="calendar-row header sticky-header">
@@ -54,18 +68,26 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
+import authService from '../services/authService.js';
 
 const props = defineProps({
   modelValue: {
     type: Object,
     default: () => ({ date: '', time: '' })
+  },
+  profissional: {
+    type: [String, Number],
+    default: ''
   }
 });
 
 const emit = defineEmits(['update:modelValue']);
 
 const currentWeekStart = ref(new Date());
+const loading = ref(false);
+const error = ref(null);
+const horariosDisponiveis = ref({});
 
 const timeSlots = [
   { value: '08:00', label: '08:00' },
@@ -105,6 +127,39 @@ const weekRange = computed(() => {
   return `${start.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} - ${end.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
 });
 
+// Carregar horários disponíveis quando a semana ou profissional mudar
+watch([currentWeekStart, () => props.profissional], async () => {
+  await loadHorariosDisponiveis();
+});
+
+async function loadHorariosDisponiveis() {
+  try {
+    loading.value = true;
+    error.value = null;
+    
+    const horarios = {};
+    
+    // Buscar horários para cada dia da semana
+    for (const day of weekDays.value) {
+      try {
+        const disponiveis = await authService.getHorariosDisponiveis(day.value, props.profissional);
+        horarios[day.value] = disponiveis || [];
+      } catch (err) {
+        console.error(`Erro ao buscar horários para ${day.value}:`, err);
+        horarios[day.value] = [];
+      }
+    }
+    
+    horariosDisponiveis.value = horarios;
+    
+  } catch (err) {
+    console.error('Erro ao carregar horários disponíveis:', err);
+    error.value = 'Erro ao carregar horários. Tente novamente.';
+  } finally {
+    loading.value = false;
+  }
+}
+
 function previousWeek() {
   const newDate = new Date(currentWeekStart.value);
   newDate.setDate(newDate.getDate() - 7);
@@ -118,13 +173,13 @@ function nextWeek() {
 }
 
 function isTimeSlotAvailable(date, time) {
-  const unavailableSlots = {
-    '2025-05-20': ['09:00', '14:30'],
-    '2025-05-21': ['10:00', '16:00'],
-    '2025-05-22': ['11:30', '15:00']
-  };
+  // Se não há dados de horários disponíveis, considerar todos disponíveis
+  if (!horariosDisponiveis.value[date]) {
+    return true;
+  }
   
-  return !unavailableSlots[date]?.includes(time);
+  // Verificar se o horário está na lista de disponíveis
+  return horariosDisponiveis.value[date].includes(time);
 }
 
 function isSelected(date, time) {
@@ -135,7 +190,7 @@ function selectTimeSlot(date, time) {
   emit('update:modelValue', { date, time });
 }
 
-onMounted(() => {
+onMounted(async () => {
   const today = new Date();
   const dayOfWeek = today.getDay();
   const daysUntilMonday = dayOfWeek === 0 ? 1 : dayOfWeek === 1 ? 0 : 8 - dayOfWeek;
@@ -143,6 +198,9 @@ onMounted(() => {
   const nextMonday = new Date(today);
   nextMonday.setDate(today.getDate() + daysUntilMonday);
   currentWeekStart.value = nextMonday;
+  
+  // Carregar horários disponíveis
+  await loadHorariosDisponiveis();
 });
 </script>
 

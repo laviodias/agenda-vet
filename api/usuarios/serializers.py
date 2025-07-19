@@ -7,8 +7,30 @@ from animais.models import Animal
 class UsuarioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Usuario
-        fields = ['id', 'username', 'email', 'nome', 'tipo', 'first_name', 'last_name']
+        fields = ['id', 'username', 'email', 'nome', 'tipo', 'first_name', 'last_name', 'telefone', 'crmv', 'especialidade']
         read_only_fields = ['id']
+        extra_kwargs = {
+            'username': {'required': False},
+            'email': {'required': True},
+            'nome': {'required': True},
+            'tipo': {'required': False},
+        }
+
+    def create(self, validated_data):
+        # Sempre usar email como username
+        validated_data['username'] = validated_data['email']
+        
+        # Definir tipo padrão se não fornecido
+        if 'tipo' not in validated_data:
+            validated_data['tipo'] = 'cliente'
+        
+        # Gerar first_name e last_name baseado no nome se não fornecidos
+        if 'nome' in validated_data and not validated_data.get('first_name'):
+            nome_parts = validated_data['nome'].split(' ', 1)
+            validated_data['first_name'] = nome_parts[0]
+            validated_data['last_name'] = nome_parts[1] if len(nome_parts) > 1 else ''
+        
+        return super().create(validated_data)
 
 
 class LoginSerializer(serializers.Serializer):
@@ -63,20 +85,13 @@ class RegistroClienteSerializer(serializers.Serializer):
             tipo='cliente'
         )
         
-        # Criar pet (assumindo que temos uma empresa padrão)
+        # Criar pet usando empresa com ID 1 fixo
         from core.models import Empresa
-        empresa_padrao, created = Empresa.objects.get_or_create(
-            nome='Clínica Veterinária Padrão',
-            defaults={
-                'cnpj': '00.000.000/0001-00',
-                'endereco': 'Endereço padrão',
-                'telefone': '(11) 99999-9999'
-            }
-        )
+        empresa = Empresa.objects.get(id=1)
         
         pet = Animal.objects.create(
             dono=user,
-            empresa=empresa_padrao,
+            empresa=empresa,
             **pet_data
         )
         

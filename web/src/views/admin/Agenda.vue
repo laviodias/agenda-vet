@@ -1,56 +1,14 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
+import authService from '../../services/authService.js'
 
-const funcionarios = ref([
-  { id: 1, nome: 'Dr. João Silva', especialidade: 'Clínico Geral' },
-  { id: 2, nome: 'Dra. Maria Santos', especialidade: 'Dermatologia' }
-])
-
-const servicos = ref([
-  { 
-    id: 1, 
-    nome: 'Consulta Clínica', 
-    duracao: 30,
-    especialidades: ['Clínico Geral']
-  },
-  { 
-    id: 2, 
-    nome: 'Banho e Tosa', 
-    duracao: 60,
-    especialidades: []
-  }
-])
-
-const horariosDisponiveis = ref([
-  { 
-    id: 1, 
-    funcionarioId: 1, 
-    servicoId: 1,
-    data: '2025-03-20', 
-    horaInicio: '09:00', 
-    horaFim: '09:30', 
-    disponivel: true 
-  },
-  { 
-    id: 2, 
-    funcionarioId: 1, 
-    servicoId: 1,
-    data: '2025-03-20', 
-    horaInicio: '10:00', 
-    horaFim: '10:30', 
-    disponivel: true 
-  },
-  { 
-    id: 3, 
-    funcionarioId: 2, 
-    servicoId: 2,
-    data: '2025-03-20', 
-    horaInicio: '14:00', 
-    horaFim: '15:00', 
-    disponivel: true 
-  }
-])
+const funcionarios = ref([])
+const servicos = ref([])
+const horariosDisponiveis = ref([])
+const loading = ref(false)
+const error = ref(null)
+const submitting = ref(false)
 
 const novoHorario = ref({
   funcionarioId: '',
@@ -60,13 +18,37 @@ const novoHorario = ref({
   horaFim: ''
 })
 
+// Carregar dados
+const loadData = async () => {
+  try {
+    loading.value = true
+    error.value = null
+    
+    const [funcionariosData, servicosData] = await Promise.all([
+      authService.getProfissionais(),
+      authService.getServicos()
+    ])
+    
+    funcionarios.value = Array.isArray(funcionariosData) ? funcionariosData : []
+    servicos.value = Array.isArray(servicosData) ? servicosData : []
+    
+  } catch (err) {
+    console.error('Erro ao carregar dados:', err)
+    error.value = 'Erro ao carregar dados. Tente novamente.'
+  } finally {
+    loading.value = false
+  }
+}
+
 const servicosPorFuncionario = computed(() => {
   const servicosDisponiveis = {}
   funcionarios.value.forEach(funcionario => {
-    servicosDisponiveis[funcionario.id] = servicos.value.filter(servico => 
-      servico.especialidades.length === 0 || 
-      servico.especialidades.includes(funcionario.especialidade)
-    )
+    servicosDisponiveis[funcionario.id] = servicos.value.filter(servico => {
+      if (!servico.especialidades) return true
+      const especialidadesServico = servico.especialidades.split(',').map(esp => esp.trim())
+      return especialidadesServico.length === 0 || 
+             especialidadesServico.includes(funcionario.especialidade)
+    })
   })
   return servicosDisponiveis
 })
@@ -92,44 +74,58 @@ const atualizarHorarioFim = () => {
   }
 }
 
-const adicionarHorario = () => {
-  if (!novoHorario.value.funcionarioId || !novoHorario.value.servicoId || 
-      !novoHorario.value.data || !novoHorario.value.horaInicio || !novoHorario.value.horaFim) {
-    alert('Por favor, preencha todos os campos')
-    return
-  }
+const adicionarHorario = async () => {
+  try {
+    if (!novoHorario.value.funcionarioId || !novoHorario.value.servicoId || 
+        !novoHorario.value.data || !novoHorario.value.horaInicio || !novoHorario.value.horaFim) {
+      error.value = 'Por favor, preencha todos os campos'
+      return
+    }
 
-  // Validar se o horário não conflita com outros horários
-  const conflito = horariosDisponiveis.value.some(h => 
-    h.funcionarioId === novoHorario.value.funcionarioId &&
-    h.data === novoHorario.value.data &&
-    ((novoHorario.value.horaInicio >= h.horaInicio && novoHorario.value.horaInicio < h.horaFim) ||
-     (novoHorario.value.horaFim > h.horaInicio && novoHorario.value.horaFim <= h.horaFim))
-  )
+    submitting.value = true
+    error.value = null
 
-  if (conflito) {
-    alert('Este horário conflita com outro horário já cadastrado')
-    return
-  }
+    const horarioData = {
+      responsavel_id: novoHorario.value.funcionarioId,
+      servico_id: novoHorario.value.servicoId,
+      data: novoHorario.value.data,
+      hora_inicio: novoHorario.value.horaInicio,
+      hora_fim: novoHorario.value.horaFim
+    }
 
-  horariosDisponiveis.value.push({
-    id: horariosDisponiveis.value.length + 1,
-    ...novoHorario.value,
-    disponivel: true
-  })
-
-  novoHorario.value = {
-    funcionarioId: '',
-    servicoId: '',
-    data: '',
-    horaInicio: '',
-    horaFim: ''
+    await authService.createHorarioDisponivel(horarioData)
+    
+    // Recarregar dados
+    await loadData()
+    
+    // Limpar formulário
+    novoHorario.value = {
+      funcionarioId: '',
+      servicoId: '',
+      data: '',
+      horaInicio: '',
+      horaFim: ''
+    }
+    
+  } catch (err) {
+    console.error('Erro ao adicionar horário:', err)
+    error.value = 'Erro ao adicionar horário. Tente novamente.'
+  } finally {
+    submitting.value = false
   }
 }
 
-const removerHorario = (id) => {
-  if (confirm('Tem certeza que deseja remover este horário?')) {
-    horariosDisponiveis.value = horariosDisponiveis.value.filter(h => h.id !== id)
+const removerHorario = async (id) => {
+  if (!confirm('Tem certeza que deseja remover este horário?')) {
+    return
+  }
+
+  try {
+    await authService.deleteHorarioDisponivel(id)
+    await loadData()
+  } catch (err) {
+    console.error('Erro ao remover horário:', err)
+    error.value = 'Erro ao remover horário. Tente novamente.'
   }
 }
 
@@ -141,6 +137,11 @@ const getServicoNome = (servicoId) => {
   const servico = servicos.value.find(s => s.id === servicoId)
   return servico ? servico.nome : 'Serviço não encontrado'
 }
+
+// Carregar dados na montagem
+onMounted(() => {
+  loadData()
+})
 </script>
 
 <template>
@@ -155,8 +156,22 @@ const getServicoNome = (servicoId) => {
       </RouterLink>
     </div>
 
+    <!-- Error state -->
+    <div v-if="error" class="notification is-danger is-light mb-4">
+      <button class="delete" @click="error = null"></button>
+      {{ error }}
+    </div>
+
+    <!-- Loading state -->
+    <div v-if="loading" class="has-text-centered">
+      <span class="icon is-large">
+        <i class="fas fa-spinner fa-spin"></i>
+      </span>
+      <p class="mt-3">Carregando dados...</p>
+    </div>
+
     <!-- Formulário de Horários -->
-    <div class="box mb-6">
+    <div v-else class="box mb-6">
       <h2 class="title is-4 mb-4">Adicionar Horário Disponível</h2>
       <div class="columns is-multiline">
         <div class="column is-6">
@@ -175,7 +190,7 @@ const getServicoNome = (servicoId) => {
                     :key="funcionario.id" 
                     :value="funcionario.id"
                   >
-                    {{ funcionario.nome }} - {{ funcionario.especialidade }}
+                    {{ funcionario.nome }} - {{ funcionario.especialidade || 'Sem especialidade' }}
                   </option>
                 </select>
               </div>
@@ -192,6 +207,7 @@ const getServicoNome = (servicoId) => {
                   v-model="novoHorario.servicoId" 
                   required
                   :disabled="!novoHorario.funcionarioId"
+                  @change="atualizarHorarioFim"
                 >
                   <option value="">Selecione um serviço</option>
                   <option 
@@ -207,7 +223,7 @@ const getServicoNome = (servicoId) => {
           </div>
         </div>
 
-        <div class="column is-6">
+        <div class="column is-4">
           <div class="field">
             <label class="label">Data *</label>
             <div class="control">
@@ -221,7 +237,7 @@ const getServicoNome = (servicoId) => {
           </div>
         </div>
 
-        <div class="column is-6">
+        <div class="column is-4">
           <div class="field">
             <label class="label">Hora Início *</label>
             <div class="control">
@@ -236,7 +252,7 @@ const getServicoNome = (servicoId) => {
           </div>
         </div>
 
-        <div class="column is-6">
+        <div class="column is-4">
           <div class="field">
             <label class="label">Hora Fim *</label>
             <div class="control">
@@ -245,7 +261,6 @@ const getServicoNome = (servicoId) => {
                 class="input" 
                 type="time" 
                 required
-                readonly
               >
             </div>
           </div>
@@ -257,11 +272,15 @@ const getServicoNome = (servicoId) => {
               <button 
                 @click="adicionarHorario"
                 class="button is-primary is-fullwidth"
+                :disabled="submitting"
               >
-                <span class="icon">
+                <span v-if="submitting" class="icon">
+                  <i class="fas fa-spinner fa-spin"></i>
+                </span>
+                <span v-else class="icon">
                   <i class="fas fa-plus"></i>
                 </span>
-                <span>Adicionar Horário</span>
+                <span>{{ submitting ? 'Adicionando...' : 'Adicionar Horário' }}</span>
               </button>
             </div>
           </div>
@@ -269,52 +288,59 @@ const getServicoNome = (servicoId) => {
       </div>
     </div>
 
+    <!-- Lista de Horários -->
     <div class="box">
       <h2 class="title is-4 mb-4">Horários Disponíveis</h2>
       
-      <div v-for="funcionario in funcionarios" :key="funcionario.id" class="mb-5">
-        <h3 class="title is-5 mb-3">{{ funcionario.nome }}</h3>
-        <div class="table-container">
-          <table class="table is-fullwidth is-striped">
-            <thead>
-              <tr>
-                <th>Data</th>
-                <th>Horário</th>
-                <th>Serviço</th>
-                <th>Status</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="horario in horariosPorFuncionario[funcionario.id]" :key="horario.id">
-                <td>{{ formatarData(horario.data) }}</td>
-                <td>{{ horario.horaInicio }} - {{ horario.horaFim }}</td>
-                <td>{{ getServicoNome(horario.servicoId) }}</td>
-                <td>
-                  <span class="tag" :class="horario.disponivel ? 'is-success' : 'is-danger'">
-                    {{ horario.disponivel ? 'Disponível' : 'Ocupado' }}
-                  </span>
-                </td>
-                <td>
-                  <div class="buttons are-small">
+      <div v-if="funcionarios.length === 0" class="has-text-centered py-6">
+        <span class="icon is-large has-text-grey-light">
+          <i class="fas fa-calendar"></i>
+        </span>
+        <p class="mt-3 has-text-grey">Nenhum funcionário cadastrado</p>
+      </div>
+
+      <div v-else>
+        <div v-for="funcionario in funcionarios" :key="funcionario.id" class="mb-6">
+          <h3 class="title is-5 mb-3">{{ funcionario.nome }}</h3>
+          
+          <div v-if="horariosPorFuncionario[funcionario.id]?.length > 0" class="table-container">
+            <table class="table is-fullwidth is-striped">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Serviço</th>
+                  <th>Hora Início</th>
+                  <th>Hora Fim</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="horario in horariosPorFuncionario[funcionario.id]" :key="horario.id">
+                  <td>{{ formatarData(horario.data) }}</td>
+                  <td>{{ getServicoNome(horario.servicoId) }}</td>
+                  <td>{{ horario.horaInicio }}</td>
+                  <td>{{ horario.horaFim }}</td>
+                  <td>
                     <button 
                       @click="removerHorario(horario.id)"
-                      class="button is-danger"
+                      class="button is-danger is-small"
                     >
                       <span class="icon">
                         <i class="fas fa-trash"></i>
                       </span>
                     </button>
-                  </div>
-                </td>
-              </tr>
-              <tr v-if="!horariosPorFuncionario[funcionario.id]?.length">
-                <td colspan="5" class="has-text-centered">
-                  Nenhum horário cadastrado
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <div v-else class="has-text-centered py-4">
+            <span class="icon has-text-grey-light">
+              <i class="fas fa-calendar-times"></i>
+            </span>
+            <p class="mt-2 has-text-grey">Nenhum horário cadastrado para este funcionário</p>
+          </div>
         </div>
       </div>
     </div>

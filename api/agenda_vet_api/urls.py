@@ -25,11 +25,13 @@ urlpatterns = [
     
     # Rotas da API
     path('api/', include('core.urls')),
-    path('api/', include('usuarios.urls')),
-    path('api/', include('servicos.urls')),
-    path('api/', include('animais.urls')),
-    path('api/', include('agendamentos.urls')),
-    path('api/admin/', include('core.urls')),  # URLs admin
+    path('api/usuarios/', include('usuarios.urls')),
+    path('api/servicos/', include('servicos.urls')),
+    path('api/animais/', include('animais.urls')),
+    path('api/agendamentos/', include('agendamentos.urls')),
+    
+    # URLs de Admin
+    path('api/admin/', include('agendamentos.admin_urls')),
     
     # JWT Token refresh
     path('api/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),

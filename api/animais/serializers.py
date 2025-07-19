@@ -4,8 +4,8 @@ from .models import Animal
 class AnimalSerializer(serializers.ModelSerializer):
     class Meta:
         model = Animal
-        fields = ['id', 'nome', 'especie', 'raca', 'data_nascimento', 'peso', 'observacoes']
-        read_only_fields = ['id', 'dono']
+        fields = ['id', 'nome', 'especie', 'raca', 'data_nascimento', 'peso', 'observacoes', 'dono', 'empresa']
+        read_only_fields = ['id']
 
 class AnimalDetailSerializer(serializers.ModelSerializer):
     dono_nome = serializers.CharField(source='dono.nome', read_only=True)

@@ -8,48 +8,11 @@ import authService from '../services/authService.js'
 const router = useRouter()
 const { brandConfig } = useBrand()
 
-const user = ref({
-  nome: 'João Silva',
-  email: 'joao@email.com'
-})
-
-const animais = ref([
-  {
-    id: 1,
-    nome: 'Rex',
-    especie: 'Cão',
-    raca: 'Labrador',
-    data_nascimento: '2022-03-15'
-  },
-  {
-    id: 2,
-    nome: 'Luna',
-    especie: 'Gato',
-    raca: 'Persa',
-    data_nascimento: '2023-01-20'
-  }
-])
-
-const agendamentos = ref([
-  {
-    id: 1,
-    data: '2025-06-25',
-    hora: '14:00',
-    servico: 'Consulta Clínica',
-    animal: 'Rex',
-    status: 'confirmado',
-    observacoes: 'Consulta de rotina para check-up geral'
-  },
-  {
-    id: 2,
-    data: '2025-06-28',
-    hora: '10:30',
-    servico: 'Vacinação',
-    animal: 'Luna',
-    status: 'pendente',
-    observacoes: 'Vacina anual contra raiva'
-  }
-])
+const user = ref(null)
+const animais = ref([])
+const agendamentos = ref([])
+const loading = ref(false)
+const error = ref(null)
 
 const showAgendamentoForm = ref(false)
 const showEditarPetForm = ref(false)
@@ -58,8 +21,11 @@ const showCancelarAgendamentoModal = ref(false)
 const petSelecionado = ref(null)
 const agendamentoSelecionado = ref(null)
 
-// Verificar se há um pet selecionado para agendamento na URL
-onMounted(() => {
+// Carregar dados na montagem do componente
+onMounted(async () => {
+  await loadData()
+  
+  // Verificar se há um pet selecionado para agendamento na URL
   const urlParams = new URLSearchParams(window.location.search)
   const agendarPetId = urlParams.get('agendarPet')
   if (agendarPetId) {
@@ -70,6 +36,33 @@ onMounted(() => {
     }
   }
 })
+
+// Função para carregar todos os dados
+const loadData = async () => {
+  try {
+    loading.value = true
+    error.value = null
+    
+    // Carregar dados do usuário e pets
+    const [userData, petsData, agendamentosData] = await Promise.all([
+      authService.getMe(),
+      authService.getPets(),
+      authService.getAgendamentosCliente()
+    ])
+    
+    user.value = userData
+    animais.value = Array.isArray(petsData) ? petsData : []
+    agendamentos.value = Array.isArray(agendamentosData) ? agendamentosData : []
+    
+  } catch (err) {
+    console.error('Erro ao carregar dados:', err)
+    error.value = 'Erro ao carregar dados. Tente novamente.'
+    agendamentos.value = []
+    animais.value = []
+  } finally {
+    loading.value = false
+  }
+}
 
 const logout = () => {
   authService.logout()
@@ -86,11 +79,23 @@ const cancelarAgendamento = (agendamento) => {
   showCancelarAgendamentoModal.value = true
 }
 
-const confirmarCancelamento = () => {
+const confirmarCancelamento = async () => {
   if (agendamentoSelecionado.value) {
-    agendamentos.value = agendamentos.value.filter(a => a.id !== agendamentoSelecionado.value.id)
-    showCancelarAgendamentoModal.value = false
-    agendamentoSelecionado.value = null
+    try {
+      await authService.cancelarAgendamento(agendamentoSelecionado.value.id)
+      
+      // Atualizar o status localmente
+      const index = agendamentos.value.findIndex(a => a.id === agendamentoSelecionado.value.id)
+      if (index !== -1) {
+        agendamentos.value[index].status = 'cancelado'
+      }
+      
+      showCancelarAgendamentoModal.value = false
+      agendamentoSelecionado.value = null
+    } catch (err) {
+      console.error('Erro ao cancelar agendamento:', err)
+      error.value = 'Erro ao cancelar agendamento. Tente novamente.'
+    }
   }
 }
 
@@ -109,21 +114,23 @@ const fecharModalAgendamento = () => {
   petSelecionado.value = null
 }
 
-const salvarPet = () => {
-  // Encontrar o índice do pet no array
-  const index = animais.value.findIndex(a => a.id === petSelecionado.value.id)
-  if (index !== -1) {
-    // Atualizar o pet
-    animais.value[index] = { ...petSelecionado.value }
+const salvarPet = async () => {
+  try {
+    // Atualizar pet via API
+    await authService.updatePet(petSelecionado.value.id, petSelecionado.value)
+    
+    // Atualizar localmente
+    const index = animais.value.findIndex(a => a.id === petSelecionado.value.id)
+    if (index !== -1) {
+      animais.value[index] = { ...petSelecionado.value }
+    }
+    
+    showEditarPetForm.value = false
+    petSelecionado.value = null
+  } catch (err) {
+    console.error('Erro ao atualizar pet:', err)
+    error.value = 'Erro ao atualizar pet. Tente novamente.'
   }
-  showEditarPetForm.value = false
-  petSelecionado.value = null
-}
-
-// Função para atualizar pets quando retornar da página Meus Pets
-const atualizarPets = () => {
-  // Em uma implementação real, aqui você buscaria os dados atualizados da API
-  // Por enquanto, vamos manter os dados locais
 }
 
 const cancelarEdicaoPet = () => {
@@ -135,12 +142,37 @@ const formatarData = (data) => {
   return new Date(data).toLocaleDateString('pt-BR')
 }
 
+const formatarHora = (dataHora) => {
+  return new Date(dataHora).toLocaleTimeString('pt-BR', { 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  })
+}
+
 const getStatusColor = (status) => {
-  return status === 'confirmado' ? 'is-success' : 'is-warning'
+  switch (status) {
+    case 'confirmado':
+      return 'is-success'
+    case 'cancelado':
+      return 'is-danger'
+    case 'realizado':
+      return 'is-info'
+    default:
+      return 'is-warning'
+  }
 }
 
 const getStatusText = (status) => {
-  return status === 'confirmado' ? 'Confirmado' : 'Pendente'
+  switch (status) {
+    case 'confirmado':
+      return 'Confirmado'
+    case 'cancelado':
+      return 'Cancelado'
+    case 'realizado':
+      return 'Realizado'
+    default:
+      return 'Pendente'
+  }
 }
 
 const calcularIdade = (dataNascimento) => {
@@ -157,6 +189,22 @@ const calcularIdade = (dataNascimento) => {
     return `${anos} ano${anos > 1 ? 's' : ''}${meses > 0 ? ` e ${meses} mes${meses > 1 ? 'es' : ''}` : ''}`
   } else {
     return `${meses} mes${meses > 1 ? 'es' : ''}`
+  }
+}
+
+// Função para lidar com agendamento criado
+const handleAgendamentoCriado = async (novoAgendamento) => {
+  try {
+    // Recarregar agendamentos
+    const agendamentosData = await authService.getAgendamentosCliente()
+    agendamentos.value = Array.isArray(agendamentosData) ? agendamentosData : []
+    
+    // Fechar modal
+    showAgendamentoForm.value = false
+    petSelecionado.value = null
+  } catch (err) {
+    console.error('Erro ao recarregar agendamentos:', err)
+    error.value = 'Agendamento criado, mas erro ao atualizar lista.'
   }
 }
 </script>
@@ -192,7 +240,7 @@ const calcularIdade = (dataNascimento) => {
               <span class="icon">
                 <i class="fas fa-user"></i>
               </span>
-              <span>{{ user.nome }}</span>
+              <span>{{ user?.nome || 'Usuário' }}</span>
             </a>
 
             <div class="navbar-dropdown is-right">
@@ -229,191 +277,226 @@ const calcularIdade = (dataNascimento) => {
 
     <!-- Main Content -->
     <div class="container mt-4">
-      <!-- Welcome Section -->
-      <div class="welcome-section mb-6">
-        <h1 class="title is-2">Bem-vindo, {{ user.nome }}!</h1>
-        <p class="subtitle">Gerencie seus agendamentos e pets</p>
+      <!-- Error state -->
+      <div v-if="error" class="notification is-danger is-light mb-4">
+        <button class="delete" @click="error = null"></button>
+        {{ error }}
       </div>
 
-      <!-- Stats Cards -->
-      <div class="columns mb-6">
-        <div class="column">
-          <div class="card">
-            <div class="card-content">
-              <div class="media">
-                <div class="media-left">
-                  <div class="stat-icon">
-                    <i class="fas fa-calendar-check"></i>
-                  </div>
-                </div>
-                <div class="media-content">
-                  <p class="title is-4">{{ agendamentos.length }}</p>
-                  <p class="subtitle is-6">Agendamentos</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="column">
-          <div class="card">
-            <div class="card-content">
-              <div class="media">
-                <div class="media-left">
-                  <div class="stat-icon">
-                    <i class="fas fa-paw"></i>
-                  </div>
-                </div>
-                <div class="media-content">
-                  <p class="title is-4">{{ animais.length }}</p>
-                  <p class="subtitle is-6">Pets</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="column">
-          <div class="card">
-            <div class="card-content">
-              <div class="media">
-                <div class="media-left">
-                  <div class="stat-icon">
-                    <i class="fas fa-clock"></i>
-                  </div>
-                </div>
-                <div class="media-content">
-                  <p class="title is-4">{{ agendamentos.filter(a => a.status === 'pendente').length }}</p>
-                  <p class="subtitle is-6">Pendentes</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+      <!-- Loading state -->
+      <div v-if="loading" class="has-text-centered">
+        <span class="icon is-large">
+          <i class="fas fa-spinner fa-spin"></i>
+        </span>
+        <p class="mt-3">Carregando dados...</p>
       </div>
 
-      <!-- Próximos Agendamentos -->
-      <div class="section">
-        <div class="columns is-vcentered mb-4">
+      <!-- Content -->
+      <div v-else>
+        <!-- Welcome Section -->
+        <div class="welcome-section mb-6">
+          <h1 class="title is-2">Bem-vindo, {{ user?.nome || 'Usuário' }}!</h1>
+          <p class="subtitle">Gerencie seus agendamentos e pets</p>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="columns mb-6">
           <div class="column">
-            <h2 class="title is-3">Próximos Agendamentos</h2>
-          </div>
-          <div class="column is-narrow">
-            <button 
-              class="button is-info"
-              @click="router.push('/atendimentos')"
-            >
-              <span class="icon">
-                <i class="fas fa-calendar-check"></i>
-              </span>
-              <span>Ver Todos os Atendimentos</span>
-            </button>
-          </div>
-        </div>
-        <div class="table-container">
-          <table class="table is-fullwidth is-striped">
-            <thead>
-              <tr>
-                <th>Data</th>
-                <th>Horário</th>
-                <th>Serviço</th>
-                <th>Pet</th>
-                <th>Status</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="agendamento in agendamentos" :key="agendamento.id">
-                <td>{{ formatarData(agendamento.data) }}</td>
-                <td>{{ agendamento.hora }}</td>
-                <td>{{ agendamento.servico }}</td>
-                <td>{{ agendamento.animal }}</td>
-                <td>
-                  <span class="tag" :class="getStatusColor(agendamento.status)">
-                    {{ getStatusText(agendamento.status) }}
-                  </span>
-                </td>
-                <td>
-                  <div class="buttons are-small">
-                    <button class="button action-btn view-btn" @click="visualizarAgendamento(agendamento)">
-                      <span class="icon">
-                        <i class="fas fa-eye"></i>
-                      </span>
-                    </button>
-                    <button 
-                      @click="cancelarAgendamento(agendamento)"
-                      class="button action-btn cancel-btn"
-                    >
-                      <span class="icon">
-                        <i class="fas fa-times"></i>
-                      </span>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-              <tr v-if="!agendamentos.length">
-                <td colspan="6" class="has-text-centered">
-                  Nenhum agendamento encontrado
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Meus Pets -->
-      <div class="section">
-        <div class="columns is-vcentered mb-4">
-          <div class="column">
-            <h2 class="title is-3">Meus Pets</h2>
-          </div>
-          <div class="column is-narrow">
-            <button 
-              class="button is-primary"
-              @click="router.push('/meus-pets')"
-            >
-              <span class="icon">
-                <i class="fas fa-paw"></i>
-              </span>
-              <span>Gerenciar Pets</span>
-            </button>
-          </div>
-        </div>
-        <div class="columns is-multiline">
-          <div 
-            v-for="animal in animais" 
-            :key="animal.id"
-            class="column is-4"
-          >
             <div class="card">
               <div class="card-content">
                 <div class="media">
                   <div class="media-left">
-                    <div class="pet-avatar">
+                    <div class="stat-icon">
+                      <i class="fas fa-calendar-check"></i>
+                    </div>
+                  </div>
+                  <div class="media-content">
+                    <p class="title is-4">{{ agendamentos.length }}</p>
+                    <p class="subtitle is-6">Agendamentos</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="column">
+            <div class="card">
+              <div class="card-content">
+                <div class="media">
+                  <div class="media-left">
+                    <div class="stat-icon">
                       <i class="fas fa-paw"></i>
                     </div>
                   </div>
                   <div class="media-content">
-                    <p class="title is-4">{{ animal.nome }}</p>
-                    <p class="subtitle is-6">{{ animal.especie }} - {{ animal.raca }}</p>
-                    <p class="help">{{ calcularIdade(animal.data_nascimento) }}</p>
+                    <p class="title is-4">{{ animais.length }}</p>
+                    <p class="subtitle is-6">Pets</p>
                   </div>
                 </div>
               </div>
-              <footer class="card-footer">
-                <a class="card-footer-item" @click="editarPet(animal)">
+            </div>
+          </div>
+
+          <div class="column">
+            <div class="card">
+              <div class="card-content">
+                <div class="media">
+                  <div class="media-left">
+                    <div class="stat-icon">
+                      <i class="fas fa-clock"></i>
+                    </div>
+                  </div>
+                  <div class="media-content">
+                    <p class="title is-4">{{ agendamentos.filter(a => a.status === 'pendente').length }}</p>
+                    <p class="subtitle is-6">Pendentes</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Próximos Agendamentos -->
+        <div class="section">
+          <div class="columns is-vcentered mb-4">
+            <div class="column">
+              <h2 class="title is-3">Próximos Agendamentos</h2>
+            </div>
+            <div class="column is-narrow">
+              <button 
+                class="button is-info"
+                @click="router.push('/atendimentos')"
+              >
+                <span class="icon">
+                  <i class="fas fa-calendar-check"></i>
+                </span>
+                <span>Ver Todos os Atendimentos</span>
+              </button>
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="table is-fullwidth is-striped">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Horário</th>
+                  <th>Serviço</th>
+                  <th>Pet</th>
+                  <th>Status</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="agendamento in agendamentos" :key="agendamento.id">
+                  <td>{{ formatarData(agendamento.data_hora) }}</td>
+                  <td>{{ formatarHora(agendamento.data_hora) }}</td>
+                  <td>{{ agendamento.servico_nome || agendamento.servico }}</td>
+                  <td>{{ agendamento.animal_nome || agendamento.animal }}</td>
+                  <td>
+                    <span class="tag" :class="getStatusColor(agendamento.status)">
+                      {{ getStatusText(agendamento.status) }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="buttons are-small">
+                      <button class="button action-btn view-btn" @click="visualizarAgendamento(agendamento)">
+                        <span class="icon">
+                          <i class="fas fa-eye"></i>
+                        </span>
+                      </button>
+                      <button 
+                        v-if="agendamento.status !== 'cancelado'"
+                        @click="cancelarAgendamento(agendamento)"
+                        class="button action-btn cancel-btn"
+                      >
+                        <span class="icon">
+                          <i class="fas fa-times"></i>
+                        </span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr v-if="!agendamentos.length">
+                  <td colspan="6" class="has-text-centered">
+                    Nenhum agendamento encontrado
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Meus Pets -->
+        <div class="section">
+          <div class="columns is-vcentered mb-4">
+            <div class="column">
+              <h2 class="title is-3">Meus Pets</h2>
+            </div>
+            <div class="column is-narrow">
+              <button 
+                class="button is-primary"
+                @click="router.push('/meus-pets')"
+              >
+                <span class="icon">
+                  <i class="fas fa-paw"></i>
+                </span>
+                <span>Gerenciar Pets</span>
+              </button>
+            </div>
+          </div>
+          <div class="columns is-multiline">
+            <div 
+              v-for="animal in animais" 
+              :key="animal.id"
+              class="column is-4"
+            >
+              <div class="card">
+                <div class="card-content">
+                  <div class="media">
+                    <div class="media-left">
+                      <div class="pet-avatar">
+                        <i class="fas fa-paw"></i>
+                      </div>
+                    </div>
+                    <div class="media-content">
+                      <p class="title is-4">{{ animal.nome }}</p>
+                      <p class="subtitle is-6">{{ animal.especie }} - {{ animal.raca || 'Raça não informada' }}</p>
+                      <p class="help">{{ calcularIdade(animal.data_nascimento) }}</p>
+                    </div>
+                  </div>
+                </div>
+                <footer class="card-footer">
+                  <a class="card-footer-item" @click="editarPet(animal)">
+                    <span class="icon">
+                      <i class="fas fa-edit"></i>
+                    </span>
+                    <span>Editar</span>
+                  </a>
+                  <a class="card-footer-item" @click="agendarParaPet(animal)">
+                    <span class="icon">
+                      <i class="fas fa-calendar-plus"></i>
+                    </span>
+                    <span>Agendar</span>
+                  </a>
+                </footer>
+              </div>
+            </div>
+            <div v-if="!animais.length" class="column is-12">
+              <div class="has-text-centered py-6">
+                <span class="icon is-large has-text-grey-light">
+                  <i class="fas fa-paw"></i>
+                </span>
+                <p class="mt-3 has-text-grey">Nenhum pet cadastrado</p>
+                <button 
+                  class="button is-primary mt-3"
+                  @click="router.push('/meus-pets')"
+                >
                   <span class="icon">
-                    <i class="fas fa-edit"></i>
+                    <i class="fas fa-plus"></i>
                   </span>
-                  <span>Editar</span>
-                </a>
-                <a class="card-footer-item" @click="agendarParaPet(animal)">
-                  <span class="icon">
-                    <i class="fas fa-calendar-plus"></i>
-                  </span>
-                  <span>Agendar</span>
-                </a>
-              </footer>
+                  <span>Cadastrar Primeiro Pet</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -436,6 +519,7 @@ const calcularIdade = (dataNascimento) => {
           <AgendamentoForm 
             :pets="animais" 
             :pet-selecionado="petSelecionado"
+            @agendamento-criado="handleAgendamentoCriado"
           />
         </section>
       </div>
@@ -527,25 +611,31 @@ const calcularIdade = (dataNascimento) => {
           <div class="field">
             <label class="label">Data</label>
             <div class="control">
-              <input class="input" type="text" :value="formatarData(agendamentoSelecionado.data)" readonly>
+              <input class="input" type="text" :value="formatarData(agendamentoSelecionado.data_hora)" readonly>
             </div>
           </div>
           <div class="field">
             <label class="label">Horário</label>
             <div class="control">
-              <input class="input" type="text" :value="agendamentoSelecionado.hora" readonly>
+              <input class="input" type="text" :value="formatarHora(agendamentoSelecionado.data_hora)" readonly>
             </div>
           </div>
           <div class="field">
             <label class="label">Serviço</label>
             <div class="control">
-              <input class="input" type="text" :value="agendamentoSelecionado.servico" readonly>
+              <input class="input" type="text" :value="agendamentoSelecionado.servico_nome || agendamentoSelecionado.servico" readonly>
             </div>
           </div>
           <div class="field">
             <label class="label">Pet</label>
             <div class="control">
-              <input class="input" type="text" :value="agendamentoSelecionado.animal" readonly>
+              <input class="input" type="text" :value="agendamentoSelecionado.animal_nome || agendamentoSelecionado.animal" readonly>
+            </div>
+          </div>
+          <div class="field">
+            <label class="label">Profissional</label>
+            <div class="control">
+              <input class="input" type="text" :value="agendamentoSelecionado.responsavel_nome || agendamentoSelecionado.responsavel || 'Não atribuído'" readonly>
             </div>
           </div>
           <div class="field">
@@ -559,12 +649,18 @@ const calcularIdade = (dataNascimento) => {
           <div class="field">
             <label class="label">Observações</label>
             <div class="control">
-              <textarea class="textarea" :value="agendamentoSelecionado.observacoes" readonly></textarea>
+              <textarea class="textarea" :value="agendamentoSelecionado.observacoes || ''" readonly></textarea>
             </div>
           </div>
         </section>
         <footer class="modal-card-foot">
-          <button class="button is-danger" @click="cancelarAgendamento(agendamentoSelecionado)">Cancelar Agendamento</button>
+          <button 
+            v-if="agendamentoSelecionado.status !== 'cancelado'"
+            class="button is-danger" 
+            @click="confirmarCancelamento"
+          >
+            Cancelar Agendamento
+          </button>
           <button class="button" @click="showVisualizarAgendamentoModal = false">Fechar</button>
         </footer>
       </div>
@@ -583,7 +679,7 @@ const calcularIdade = (dataNascimento) => {
           ></button>
         </header>
         <section class="modal-card-body">
-          <p>Tem certeza que deseja cancelar o agendamento para {{ agendamentoSelecionado.animal }} em {{ formatarData(agendamentoSelecionado.data) }} às {{ agendamentoSelecionado.hora }}?</p>
+          <p>Tem certeza que deseja cancelar o agendamento para {{ agendamentoSelecionado.animal_nome || agendamentoSelecionado.animal }} em {{ formatarData(agendamentoSelecionado.data_hora) }} às {{ formatarHora(agendamentoSelecionado.data_hora) }}?</p>
         </section>
         <footer class="modal-card-foot">
           <button class="button is-danger" @click="confirmarCancelamento">Confirmar Cancelamento</button>
