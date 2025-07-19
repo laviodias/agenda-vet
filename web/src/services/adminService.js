@@ -539,6 +539,88 @@ class AdminService {
       throw error
     }
   }
+
+  // ===== AGENDAMENTOS =====
+  
+  // Buscar todos os agendamentos
+  async getAgendamentos() {
+    try {
+      return await apiService.get('/admin/agendamentos/')
+    } catch (error) {
+      console.error('Erro ao buscar agendamentos:', error)
+      throw error
+    }
+  }
+
+  // Criar novo agendamento
+  async createAgendamento(agendamentoData) {
+    try {
+      return await apiService.post('/admin/agendamentos/', agendamentoData)
+    } catch (error) {
+      console.error('Erro ao criar agendamento:', error)
+      throw error
+    }
+  }
+
+  // Atualizar agendamento
+  async updateAgendamento(agendamentoId, agendamentoData) {
+    try {
+      return await apiService.put(`/admin/agendamentos/${agendamentoId}/`, agendamentoData)
+    } catch (error) {
+      console.error('Erro ao atualizar agendamento:', error)
+      throw error
+    }
+  }
+
+  // Atualizar status do agendamento
+  async updateAgendamentoStatus(agendamentoId, status) {
+    try {
+      return await apiService.patch(`/admin/agendamentos/${agendamentoId}/status/`, { status })
+    } catch (error) {
+      console.error('Erro ao atualizar status do agendamento:', error)
+      throw error
+    }
+  }
+
+  // Excluir agendamento
+  async deleteAgendamento(agendamentoId) {
+    try {
+      return await apiService.delete(`/admin/agendamentos/${agendamentoId}/`)
+    } catch (error) {
+      console.error('Erro ao excluir agendamento:', error)
+      throw error
+    }
+  }
+
+  // Buscar estatísticas de agendamentos
+  async getAgendamentoStats() {
+    try {
+      return await apiService.get('/admin/agendamentos/stats/')
+    } catch (error) {
+      console.error('Erro ao buscar estatísticas de agendamentos:', error)
+      throw error
+    }
+  }
+
+  // Buscar responsáveis (profissionais)
+  async getResponsaveis() {
+    try {
+      return await apiService.get('/admin/responsaveis/')
+    } catch (error) {
+      console.error('Erro ao buscar responsáveis:', error)
+      throw error
+    }
+  }
+
+  // Buscar serviços
+  async getServicos() {
+    try {
+      return await apiService.get('/admin/servicos/')
+    } catch (error) {
+      console.error('Erro ao buscar serviços:', error)
+      throw error
+    }
+  }
 }
 
 export default new AdminService() 

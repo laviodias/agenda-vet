@@ -74,7 +74,17 @@ const routes = [
         meta: { 
           requiresAuth: true, 
           requiresAdmin: true,
-          permissions: [{ resource: 'agendamentos', action: 'manage' }]
+          permissions: [{ resource: 'agendamentos', action: 'read' }]
+        }
+      },
+      {
+        path: 'agendamentos',
+        name: 'Agendamentos',
+        component: () => import('../views/admin/Agendamentos.vue'),
+        meta: { 
+          requiresAuth: true, 
+          requiresAdmin: true,
+          permissions: [{ resource: 'agendamentos', action: 'read' }]
         }
       },
       {

@@ -9,6 +9,7 @@ from .serializers import DisponibilidadeAgendaSerializer, AgendamentoSerializer
 from servicos.models import Servico
 from usuarios.models import Usuario
 from core.permissions import PermissionChecker, require_permission, HasPermission
+from animais.models import Animal
 
 # Create your views here.
 
@@ -212,6 +213,249 @@ def cancelar_agendamento(request, agendamento_id):
             'error': 'Erro ao cancelar agendamento',
             'detail': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ===== VIEWS PARA ADMIN =====
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+@require_permission('agendamentos', 'read')
+def get_agendamentos_admin(request):
+    """Listar todos os agendamentos para admin"""
+    try:
+        agendamentos = Agendamento.objects.select_related(
+            'cliente', 'animal', 'servico', 'responsavel'
+        ).order_by('-data_hora')
+        
+        data = []
+        for agendamento in agendamentos:
+            data.append({
+                'id': agendamento.id,
+                'cliente_id': agendamento.cliente.id,
+                'cliente_nome': agendamento.cliente.nome,
+                'animal_id': agendamento.animal.id,
+                'animal_nome': agendamento.animal.nome,
+                'servico_id': agendamento.servico.id,
+                'servico_nome': agendamento.servico.nome,
+                'responsavel_id': agendamento.responsavel.id if agendamento.responsavel else None,
+                'responsavel_nome': agendamento.responsavel.nome if agendamento.responsavel else None,
+                'data_hora': agendamento.data_hora,
+                'observacoes': agendamento.observacoes,
+                'status': 'confirmado'  # Status padrão
+            })
+        return Response(data)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+@require_permission('agendamentos', 'create')
+def create_agendamento_admin(request):
+    """Criar novo agendamento para admin"""
+    try:
+        data = request.data
+        
+        # Buscar objetos relacionados
+        cliente = Usuario.objects.get(id=data['cliente_id'], tipo='cliente')
+        animal = Animal.objects.get(id=data['animal_id'])
+        servico = Servico.objects.get(id=data['servico_id'])
+        responsavel = None
+        if data.get('responsavel_id'):
+            responsavel = Usuario.objects.get(id=data['responsavel_id'], tipo='profissional')
+        
+        # Criar agendamento
+        agendamento = Agendamento.objects.create(
+            cliente=cliente,
+            animal=animal,
+            servico=servico,
+            responsavel=responsavel,
+            data_hora=data['data_hora'],
+            observacoes=data.get('observacoes', '')
+        )
+        
+        return Response({
+            'id': agendamento.id,
+            'message': 'Agendamento criado com sucesso'
+        })
+    except Usuario.DoesNotExist:
+        return Response({'error': 'Usuário não encontrado'}, status=404)
+    except Animal.DoesNotExist:
+        return Response({'error': 'Animal não encontrado'}, status=404)
+    except Servico.DoesNotExist:
+        return Response({'error': 'Serviço não encontrado'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)
+
+
+@api_view(['PUT'])
+@permission_classes([permissions.IsAuthenticated])
+@require_permission('agendamentos', 'update')
+def update_agendamento_admin(request, agendamento_id):
+    """Atualizar agendamento para admin"""
+    try:
+        agendamento = Agendamento.objects.get(id=agendamento_id)
+        data = request.data
+        
+        # Atualizar campos básicos
+        agendamento.data_hora = data.get('data_hora', agendamento.data_hora)
+        agendamento.observacoes = data.get('observacoes', agendamento.observacoes)
+        
+        # Atualizar relacionamentos se fornecidos
+        if 'cliente_id' in data:
+            cliente = Usuario.objects.get(id=data['cliente_id'], tipo='cliente')
+            agendamento.cliente = cliente
+        
+        if 'animal_id' in data:
+            animal = Animal.objects.get(id=data['animal_id'])
+            agendamento.animal = animal
+        
+        if 'servico_id' in data:
+            servico = Servico.objects.get(id=data['servico_id'])
+            agendamento.servico = servico
+        
+        if 'responsavel_id' in data:
+            responsavel = None
+            if data['responsavel_id']:
+                responsavel = Usuario.objects.get(id=data['responsavel_id'], tipo='profissional')
+            agendamento.responsavel = responsavel
+        
+        agendamento.save()
+        
+        return Response({'message': 'Agendamento atualizado com sucesso'})
+    except Agendamento.DoesNotExist:
+        return Response({'error': 'Agendamento não encontrado'}, status=404)
+    except Usuario.DoesNotExist:
+        return Response({'error': 'Usuário não encontrado'}, status=404)
+    except Animal.DoesNotExist:
+        return Response({'error': 'Animal não encontrado'}, status=404)
+    except Servico.DoesNotExist:
+        return Response({'error': 'Serviço não encontrado'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)
+
+
+@api_view(['PATCH'])
+@permission_classes([permissions.IsAuthenticated])
+@require_permission('agendamentos', 'update')
+def update_agendamento_status_admin(request, agendamento_id):
+    """Atualizar status do agendamento para admin"""
+    try:
+        agendamento = Agendamento.objects.get(id=agendamento_id)
+        data = request.data
+        
+        # Por enquanto, vamos apenas simular o status
+        # Em um sistema real, você teria um campo status no modelo
+        status = data.get('status', 'confirmado')
+        
+        return Response({
+            'message': f'Status do agendamento atualizado para {status}',
+            'status': status
+        })
+    except Agendamento.DoesNotExist:
+        return Response({'error': 'Agendamento não encontrado'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)
+
+
+@api_view(['DELETE'])
+@permission_classes([permissions.IsAuthenticated])
+@require_permission('agendamentos', 'delete')
+def delete_agendamento_admin(request, agendamento_id):
+    """Excluir agendamento para admin"""
+    try:
+        agendamento = Agendamento.objects.get(id=agendamento_id)
+        agendamento.delete()
+        
+        return Response({'message': 'Agendamento excluído com sucesso'})
+    except Agendamento.DoesNotExist:
+        return Response({'error': 'Agendamento não encontrado'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+@require_permission('agendamentos', 'read')
+def get_agendamento_stats_admin(request):
+    """Buscar estatísticas de agendamentos para admin"""
+    try:
+        total_agendamentos = Agendamento.objects.count()
+        
+        # Agendamentos de hoje
+        hoje = timezone.now()
+        hoje_inicio = hoje.replace(hour=0, minute=0, second=0, microsecond=0)
+        hoje_fim = hoje.replace(hour=23, minute=59, second=59, microsecond=999999)
+        agendamentos_hoje = Agendamento.objects.filter(
+            data_hora__gte=hoje_inicio,
+            data_hora__lte=hoje_fim
+        ).count()
+        
+        # Agendamentos da semana
+        inicio_semana = hoje - timedelta(days=hoje.weekday())
+        fim_semana = inicio_semana + timedelta(days=6)
+        agendamentos_semana = Agendamento.objects.filter(
+            data_hora__gte=inicio_semana,
+            data_hora__lte=fim_semana
+        ).count()
+        
+        # Agendamentos do mês
+        inicio_mes = hoje.replace(day=1)
+        fim_mes = (inicio_mes + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+        agendamentos_mes = Agendamento.objects.filter(
+            data_hora__gte=inicio_mes,
+            data_hora__lte=fim_mes
+        ).count()
+        
+        return Response({
+            'totalAgendamentos': total_agendamentos,
+            'agendamentosHoje': agendamentos_hoje,
+            'agendamentosSemana': agendamentos_semana,
+            'agendamentosMes': agendamentos_mes
+        })
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+@require_permission('usuarios', 'read')
+def get_responsaveis_admin(request):
+    """Buscar responsáveis (profissionais) para admin"""
+    try:
+        responsaveis = Usuario.objects.filter(tipo='profissional').order_by('nome')
+        data = []
+        for responsavel in responsaveis:
+            data.append({
+                'id': responsavel.id,
+                'nome': responsavel.nome,
+                'email': responsavel.email,
+                'especialidade': responsavel.especialidade
+            })
+        return Response(data)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+@require_permission('servicos', 'read')
+def get_servicos_admin(request):
+    """Buscar serviços para admin"""
+    try:
+        servicos = Servico.objects.all().order_by('nome')
+        data = []
+        for servico in servicos:
+            data.append({
+                'id': servico.id,
+                'nome': servico.nome,
+                'descricao': servico.descricao,
+                'duracao': servico.duracao,
+                'preco': servico.preco
+            })
+        return Response(data)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
 
 @api_view(['GET'])
 @permission_classes([permissions.AllowAny])

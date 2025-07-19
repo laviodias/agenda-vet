@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue'
+import { RouterLink } from 'vue-router'
 
 const funcionarios = ref([
   { id: 1, nome: 'Dr. João Silva', especialidade: 'Clínico Geral' },
@@ -144,7 +145,15 @@ const getServicoNome = (servicoId) => {
 
 <template>
   <div class="agenda-container">
-    <h1 class="title is-2 mb-4">Gerenciamento de Agenda</h1>
+    <div class="header-section">
+      <h1 class="title is-2 mb-4">Gerenciamento de Agenda</h1>
+      <RouterLink to="/admin/agendamentos" class="button is-info">
+        <span class="icon">
+          <i class="fas fa-list"></i>
+        </span>
+        <span>Ver Todos os Agendamentos</span>
+      </RouterLink>
+    </div>
 
     <!-- Formulário de Horários -->
     <div class="box mb-6">
@@ -315,6 +324,13 @@ const getServicoNome = (servicoId) => {
 <style scoped>
 .agenda-container {
   padding: 1rem;
+}
+
+.header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
 }
 
 .table-container {

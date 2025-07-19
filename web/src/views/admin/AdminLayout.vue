@@ -73,6 +73,15 @@ const logout = () => {
             </span>
           </RouterLink>
 
+          <RouterLink class="navbar-item" to="/admin/agendamentos">
+            <span class="icon-text">
+              <span class="icon">
+                <i class="fas fa-list"></i>
+              </span>
+              <span>Agendamentos</span>
+            </span>
+          </RouterLink>
+
           <RouterLink class="navbar-item" to="/admin/marca">
             <span class="icon-text">
               <span class="icon">

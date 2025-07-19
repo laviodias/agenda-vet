@@ -29,6 +29,7 @@ urlpatterns = [
     path('api/', include('servicos.urls')),
     path('api/', include('animais.urls')),
     path('api/', include('agendamentos.urls')),
+    path('api/admin/', include('core.urls')),  # URLs admin
     
     # JWT Token refresh
     path('api/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),

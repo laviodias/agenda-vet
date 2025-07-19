@@ -1349,3 +1349,6 @@ def get_animal_agendamentos(request, animal_id):
         return Response({'error': 'Animal não encontrado'}, status=404)
     except Exception as e:
         return Response({'error': str(e)}, status=500)
+
+
+
